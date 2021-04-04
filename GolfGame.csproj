@@ -20,7 +20,13 @@
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     </PropertyGroup>
     <ItemGroup>
-      <PackageReference Include="glfw-net" Version="3.3.1" />
+      <Compile Remove="glfw\GL.cs" />
+    </ItemGroup>
+    <ItemGroup>
+      <None Include="glfw\GL.cs" />
+    </ItemGroup>
+    <ItemGroup>
+      <PackageReference Include="OpenTK" Version="5.0.0-pre.3" />
     </ItemGroup>
     <ItemGroup>
       <None Update="glfw\glfw.dll">
