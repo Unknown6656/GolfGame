@@ -1,10 +1,13 @@
-﻿using System.Windows.Forms;
+﻿
+namespace GolfGame
+{
+    public static class Program
+    {
+        public static int Main(string[] argv)
+        {
 
-using GolfGame;
 
-
-using GameWindow window = new();
-
-Application.EnableVisualStyles();
-Application.RenderWithVisualStyles = true;
-Application.Run(window);
+            return 0;
+        }
+    }
+}
