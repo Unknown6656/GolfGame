@@ -9,87 +9,96 @@ using OpenTK.Input;
 using OpenTK.Core;
 using OpenTK;
 using OpenTK.Mathematics;
+using OpenTK.Windowing.Desktop;
+using OpenTK.Windowing.Common;
+
+
 
 namespace GolfGame
 {
-    public static unsafe class Program
+    public sealed class GolfGame
+        : GameWindow
     {
         private const int INIT_WINDOW_WIDTH = 1440;
         private const int INIT_WINDOW_HEIGHT = 900;
-        private static GolfCourse _course = new(Par.Par4, 420);
+
+        private static GolfCourse? _curent_golf_course = new(Par.Par4, 420);
 
 
-        public static int Main(string[] argv)
+
+        public GolfGame()
+            : base(
+                new GameWindowSettings {
+                    IsMultiThreaded = true,
+                    RenderFrequency = 60,
+                },
+                new NativeWindowSettings {
+                    API = ContextAPI.OpenGL,
+                    APIVersion = new(3, 3),
+                    Size = new(INIT_WINDOW_WIDTH, INIT_WINDOW_HEIGHT),
+                    NumberOfSamples = 4,
+                    Title = "Golf Game",
+#if DEBUG
+                    Flags = ContextFlags.Debug
+#endif
+                })
         {
-            try
-            {
-                GLLoader.LoadBindings(new GLFWBindingsContext());
-
-                GLFW.Init();
-                GLFW.WindowHint(WindowHintInt.ContextVersionMajor, 3);
-                GLFW.WindowHint(WindowHintInt.ContextVersionMinor, 3);
-                GLFW.WindowHint(WindowHintOpenGlProfile.OpenGlProfile, OpenGlProfile.Core);
-
-                Window* window = GLFW.CreateWindow(INIT_WINDOW_WIDTH, INIT_WINDOW_HEIGHT, "Golf Game", null, null);
-
-                if (window == null)
-                    return -1;
-
-                GLFW.MakeContextCurrent(window);
-                GLFW.SetFramebufferSizeCallback(window, (hwnd, width, height) => GL.Viewport(0, 0, width, height));
-                GL.Viewport(0, 0, INIT_WINDOW_WIDTH, INIT_WINDOW_HEIGHT);
-
-
-                (Vector2[] vertices, (int i1, int i2, int i3)[] indices) = _course.Rasterize();
-                uint VBO;
-
-                GL.GenBuffers(1, &VBO);
-                GL.BindBuffer(BufferTargetARB.ArrayBuffer, VBO);
-                GL.BufferData(BufferTargetARB.ArrayBuffer, )
-
-
-
-
-                Stopwatch sw = new();
-
-                while (!GLFW.WindowShouldClose(window))
-                {
-                    sw.Reset();
-                    sw.Start();
-
-                    ProcesInput(window);
-                    RenderImage(window);
-
-                    GLFW.SwapBuffers(window);
-                    GLFW.PollEvents();
-
-                    sw.Stop();
-
-                    GLFW.SetWindowTitle(window, $"{(double)Stopwatch.Frequency / sw.ElapsedTicks,9:F3} FPS");
-                }
-            }
-            finally
-            {
-                GLFW.Terminate();
-            }
-
-            return 0;
         }
 
-        private static void ProcesInput(Window* window)
+        protected override void OnLoad()
         {
-            if (GLFW.GetKey(window, Keys.Escape) == InputAction.Press)
-                GLFW.SetWindowShouldClose(window, true);
+            // TODO
+
+            base.OnLoad();
         }
 
-        private static void RenderImage(Window* window)
+        protected override void OnClosed()
         {
-            GL.ClearColor(.2f, .3f, 1f, 1f);
-            GL.Clear(ClearBufferMask.ColorBufferBit);
+            GLFW.Terminate();
+
+            base.OnClosed();
         }
 
+        protected override void OnUpdateFrame(FrameEventArgs e)
+        {
+            KeyboardState input = KeyboardState;
 
-        internal static float NextFloat(this Random random, float scale = 1f) => (float)random.NextDouble() * scale;
+            ProcesInput(input, out bool exit);
+
+            if (exit)
+                Close();
+
+            RenderFrame();
+            SwapBuffers();
+#if DEBUG
+            Title = $"{1 / e.Time,9:F3} FPS";
+#endif
+            base.OnUpdateFrame(e);
+        }
+
+        private void ProcesInput(KeyboardState input, out bool exit)
+        {
+            // TODO
+
+            exit = input.IsKeyDown(Keys.Escape);
+        }
+
+        private void RenderFrame()
+        {
+
+        }
+
+        public static void Main(string[] argv)
+        {
+            using (GolfGame game = new())
+                game.Run();
+        }
+    }
+
+    internal static class Util
+    {
+        static float NextFloat(this Random random, float scale = 1f) => (float)random.NextDouble() * scale;
+
     }
 
     public sealed class GolfCourse
