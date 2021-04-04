@@ -11,11 +11,36 @@ using OpenTK;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.Common;
-
-
+using Unknown6656.Mathematics.Numerics;
+using System.Collections.Generic;
+using Unknown6656.Common;
 
 namespace GolfGame
 {
+    public unsafe record BufferObject(uint ID)
+        : IDisposable
+    {
+        public BufferObject SetData<T>(Span<T> values, bool clear = false)
+            where T : unmanaged
+        {
+            GL.BindBuffer(BufferTargetARB.ArrayBuffer, ID);
+            GL.BufferData(BufferTargetARB.ArrayBuffer, values, BufferUsageARB.StaticDraw);
+
+            if (clear)
+                GL.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
+
+            return this;
+        }
+
+        public void Dispose()
+        {
+            GL.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
+            GL.DeleteBuffer(ID);
+        }
+
+        public static BufferObject Create() => new(GL.GenBuffer());
+    }
+
     public sealed class GolfGame
         : GameWindow
     {
@@ -23,18 +48,19 @@ namespace GolfGame
         private const int INIT_WINDOW_HEIGHT = 900;
 
         private static GolfCourse? _curent_golf_course = new(Par.Par4, 420);
-
+        private readonly List<BufferObject> _vbos = new();
 
 
         public GolfGame()
             : base(
                 new GameWindowSettings {
                     IsMultiThreaded = true,
-                    RenderFrequency = 60,
+                    RenderFrequency = 0,
+                    UpdateFrequency = 0,
                 },
                 new NativeWindowSettings {
                     API = ContextAPI.OpenGL,
-                    APIVersion = new(3, 3),
+                    APIVersion = new(4, 2),
                     Size = new(INIT_WINDOW_WIDTH, INIT_WINDOW_HEIGHT),
                     NumberOfSamples = 4,
                     Title = "Golf Game",
@@ -47,9 +73,17 @@ namespace GolfGame
 
         protected override void OnLoad()
         {
-            // TODO
+            GL.ClearColor(.3f, .5f, 1f, 1f);
 
             base.OnLoad();
+        }
+
+        protected override void OnUnload()
+        {
+            _vbos.Do(obj => obj.Dispose());
+            _vbos.Clear();
+
+            base.OnUnload();
         }
 
         protected override void OnClosed()
@@ -59,33 +93,36 @@ namespace GolfGame
             base.OnClosed();
         }
 
-        protected override void OnUpdateFrame(FrameEventArgs e)
+        //protected override void OnResize()
+        //{
+        //    GL.Viewport(0, 0, Width, Height);
+        //
+        //    base.OnResize();
+        //}
+
+        protected override void OnKeyUp(KeyboardKeyEventArgs e)
         {
-            KeyboardState input = KeyboardState;
-
-            ProcesInput(input, out bool exit);
-
-            if (exit)
+            if (e.Key is Keys.Escape)
                 Close();
 
-            RenderFrame();
+            base.OnKeyUp(e);
+        }
+
+        protected override void OnRenderFrame(FrameEventArgs e)
+        {
+            RenderImage();
             SwapBuffers();
 #if DEBUG
             Title = $"{1 / e.Time,9:F3} FPS";
 #endif
-            base.OnUpdateFrame(e);
+            base.OnRenderFrame(e);
         }
 
-        private void ProcesInput(KeyboardState input, out bool exit)
+        private void RenderImage()
         {
+            GL.Clear(ClearBufferMask.ColorBufferBit);
+
             // TODO
-
-            exit = input.IsKeyDown(Keys.Escape);
-        }
-
-        private void RenderFrame()
-        {
-
         }
 
         public static void Main(string[] argv)
@@ -97,14 +134,13 @@ namespace GolfGame
 
     internal static class Util
     {
-        static float NextFloat(this Random random, float scale = 1f) => (float)random.NextDouble() * scale;
-
+        public static float NextFloat(this XorShift random, float scale) => random.NextFloat() * scale;
     }
 
     public sealed class GolfCourse
     {
         public Par Par { get; }
-        public Random Random { get; }
+        public XorShift Random { get; }
         public Vector2 StartPosition { get; }
         public Vector2[] CourseMidwayPoints { get; }
         public (Vector2 Pos, float Size) PuttingGreen { get; }
@@ -118,9 +154,9 @@ namespace GolfGame
             float m = .39f - (par - Par.Par3) * .13f;
 
             StartPosition = new(Random.NextFloat(m), Random.NextFloat());
-            PuttingGreen = (new(Random.NextFloat(m) + (1 - m), Random.NextFloat()), Random.NextFloat(.15f);
+            PuttingGreen = (new(Random.NextFloat(m) + (1 - m), Random.NextFloat()), Random.NextFloat(.15f));
 
-            double φ = Math.Atan2(PuttingGreen.Pos.Y - StartPosition.Y, PuttingGreen.Pos.X - StartPosition.X) + Math.PI / 2;
+            double φ = Math.Atan2(PuttingGreen.Pos.Y - StartPosition.Y, PuttingGreen.Pos.X - StartPosition.X) + Math.PI * .5;
             Vector2 lerp(float f) => new(f * StartPosition.X + (1 - f) * PuttingGreen.Pos.X, f * StartPosition.Y + (1 - f) * PuttingGreen.Pos.Y);
 
             if (par is Par.Par4)
@@ -166,7 +202,7 @@ namespace GolfGame
 
             GL.Enable(EnableCap.VertexArray);
             GL.BindBuffer(BufferTargetARB.ArrayBuffer, vbo.VBOIndex);
-            GL.vertexpointer
+            //GL.vertexpointer
 
 
             return vbo;
