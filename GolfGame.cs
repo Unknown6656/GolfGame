@@ -60,7 +60,7 @@ namespace GolfGame
                 },
                 new NativeWindowSettings {
                     API = ContextAPI.OpenGL,
-                    APIVersion = new(4, 2),
+                    APIVersion = new(4, 6),
                     Size = new(INIT_WINDOW_WIDTH, INIT_WINDOW_HEIGHT),
                     NumberOfSamples = 4,
                     Title = "Golf Game",
