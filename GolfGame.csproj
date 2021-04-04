@@ -20,17 +20,14 @@
         <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     </PropertyGroup>
     <ItemGroup>
-      <Compile Remove="glfw\GL.cs" />
-    </ItemGroup>
-    <ItemGroup>
-      <None Include="glfw\GL.cs" />
-    </ItemGroup>
-    <ItemGroup>
       <PackageReference Include="OpenTK" Version="5.0.0-pre.3" />
     </ItemGroup>
     <ItemGroup>
-      <None Update="glfw\glfw.dll">
+      <None Update="glfw.dll">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+    </ItemGroup>
+    <ItemGroup>
+      <Folder Include="glfw\" />
     </ItemGroup>
 </Project>
