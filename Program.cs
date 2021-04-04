@@ -1,12 +1,10 @@
-﻿using System;
+﻿using System.Windows.Forms;
 
-namespace GolfGame
-{
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            Console.WriteLine("Hello World!");
-        }
-    }
-}
+using GolfGame;
+
+
+using GameWindow window = new();
+
+Application.EnableVisualStyles();
+Application.RenderWithVisualStyles = true;
+Application.Run(window);
