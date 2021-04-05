@@ -27,7 +27,7 @@
       <None Update="shaders\shader.vert">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
-      <None Update="shaders\shder.frag">
+      <None Update="shaders\shader.frag">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
     </ItemGroup>
