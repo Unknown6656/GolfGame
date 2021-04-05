@@ -50,6 +50,16 @@ namespace GolfGame
 
         protected override void OnLoad()
         {
+            uint program = GL.CreateProgram();
+            using Shader s_vert = new("shader.vert", ShaderType.VertexShader);
+            using Shader s_frag = new("shader.frag", ShaderType.FragmentShader);
+
+            GL.AttachShader(program, s_vert);
+            GL.AttachShader(program, s_frag);
+            GL.LinkProgram(program);
+            GL.UseProgram(program);
+            GL.DetachShader(program, s_vert);
+            GL.DetachShader(program, s_frag);
             GL.ClearColor(.3f, .5f, 1f, 1f);
 
             base.OnLoad();
