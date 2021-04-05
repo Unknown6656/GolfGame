@@ -32,6 +32,7 @@ namespace GolfGame
     }
 
     public sealed class Shader
+        : IDisposable
     {
         public uint Handle { get; }
         public string Path { get; }
@@ -55,6 +56,16 @@ namespace GolfGame
             if (!string.IsNullOrEmpty(log))
                 CompileLog = log;
         }
+
+        public override bool Equals(object? obj) => obj is Shader s && Handle == s.Handle;
+
+        public override int GetHashCode() => Handle.GetHashCode();
+
+        public override string ToString() => $"{ShaderType}: {Handle}";
+
+        public void Dispose() => GL.DeleteShader(Handle);
+
+        public static implicit operator uint(Shader shader) => shader.Handle;
     }
 
     internal static class Util
