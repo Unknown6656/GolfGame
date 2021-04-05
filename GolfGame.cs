@@ -14,6 +14,7 @@ using OpenTK.Windowing.Common;
 using Unknown6656.Mathematics.Numerics;
 using System.Collections.Generic;
 using Unknown6656.Common;
+using System.IO;
 
 namespace GolfGame
 {
@@ -135,6 +136,32 @@ namespace GolfGame
     internal static class Util
     {
         public static float NextFloat(this XorShift random, float scale) => random.NextFloat() * scale;
+    }
+
+    public sealed class Shader
+    {
+        public uint Handle { get; }
+        public string Path { get; }
+        public string SourceCode { get; }
+        public string? CompileLog { get; }
+        public ShaderType ShaderType { get; }
+
+
+        public Shader(string path, ShaderType type)
+        {
+            Path = path;
+            SourceCode = File.ReadAllText(path);
+            Handle = GL.CreateShader(type);
+
+            GL.ShaderSource(Handle, SourceCode);
+            GL.CompileShader(Handle);
+
+            int log_length = 0;
+            string log = GL.GetShaderInfoLog(Handle, 1024 * 1024, ref log_length);
+
+            if (!string.IsNullOrEmpty(log))
+                CompileLog = log;
+        }
     }
 
     public sealed class GolfCourse
