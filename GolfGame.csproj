@@ -23,4 +23,12 @@
       <PackageReference Include="OpenTK" Version="5.0.0-pre.3" />
       <PackageReference Include="Unknown6656.Core" Version="1.0.20.2" />
     </ItemGroup>
+    <ItemGroup>
+      <None Update="shaders\shader.vert">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="shaders\shder.frag">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
 </Project>
