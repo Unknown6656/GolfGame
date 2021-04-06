@@ -44,11 +44,13 @@ namespace GolfGame
         public Shader(string path, ShaderType type)
         {
             Path = path;
+            ShaderType = type;
             SourceCode = File.ReadAllText(path);
             Handle = GL.CreateShader(type);
 
             GL.ShaderSource(Handle, SourceCode);
             GL.CompileShader(Handle);
+            GL.ObjectLabel(ObjectIdentifier.Shader, Handle, path.Length, path);
 
             int log_length = 0;
             string log = GL.GetShaderInfoLog(Handle, 1024 * 1024, ref log_length);
