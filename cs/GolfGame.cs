@@ -1,26 +1,14 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Threading.Tasks;
+using System.Collections.Generic;
 using System;
 
 using OpenTK.Windowing.GraphicsLibraryFramework;
-using OpenTK.Windowing;
-using OpenTK.Graphics.OpenGL;
-using OpenTK.Graphics;
-using OpenTK.Input;
-using OpenTK.Core;
-using OpenTK;
-using OpenTK.Mathematics;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.Common;
+using OpenTK.Graphics.OpenGL;
+using OpenTK.Mathematics;
 
 using Unknown6656.Mathematics.Numerics;
-using Unknown6656.Common;
-using System.Threading.Tasks.Sources;
-using System.Runtime.InteropServices;
-using System.Runtime.CompilerServices;
-using System.Reflection;
-using System.Threading.Tasks;
-using System.Runtime.ExceptionServices;
 
 namespace GolfGame
 {
