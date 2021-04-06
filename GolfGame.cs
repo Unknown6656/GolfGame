@@ -127,7 +127,6 @@ namespace GolfGame
 
             GL.ClearColor(.3f, .5f, 1f, 1f);
 
-
             (Vector3[] vertices, uint[] indices) = _curent_golf_course.Rasterize(1);
 
             ProvideVBO("aPosition", vertices, indices);
