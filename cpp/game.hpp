@@ -91,4 +91,31 @@ struct GolfCourse
         else
             _course_midway_points = std::vector<glm::vec2>();
     }
+
+    void rasterize(const int size, std::vector<glm::vec3>* const vertices, std::vector<int>* const indices) const
+    {
+        *vertices = std::vector<glm::vec3>((size + 1) * (size + 1));
+        *indices = std::vector<int>(size * size * 6);
+
+        for (int i = 0; i < vertices->size(); ++i)
+        {
+            const int ix = i % (size + 1);
+            const int iz = i / (size + 1);
+            const float x = (float)ix / size;
+            const float z = (float)iz / size;
+            const float y = .0f;
+
+            (*vertices)[i] = glm::vec3(x, z, y);
+
+            if (ix < size && iz < size)
+            {
+                (*indices)[(ix + iz * size) * 6 + 0] = ix + iz * (size + 1);
+                (*indices)[(ix + iz * size) * 6 + 1] =
+                (*indices)[(ix + iz * size) * 6 + 3] = ix + 1 + iz * (size + 1);
+                (*indices)[(ix + iz * size) * 6 + 4] = ix + 1 + (iz + 1) * (size + 1);
+                (*indices)[(ix + iz * size) * 6 + 2] =
+                (*indices)[(ix + iz * size) * 6 + 5] = ix + (iz + 1) * (size + 1);
+            }
+        }
+    }
 };
