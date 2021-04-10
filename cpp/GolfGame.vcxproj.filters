@@ -34,5 +34,7 @@
     <CopyFileToFolders Include="shaders\shader.frag" />
     <CopyFileToFolders Include="shaders\shader.geom" />
     <CopyFileToFolders Include="shaders\shader.vert" />
+    <CopyFileToFolders Include="glew32.dll" />
+    <CopyFileToFolders Include="glfw3.dll" />
   </ItemGroup>
 </Project>
