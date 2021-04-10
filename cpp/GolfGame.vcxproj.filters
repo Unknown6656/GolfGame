@@ -30,4 +30,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="shaders\shader.frag" />
+    <CopyFileToFolders Include="shaders\shader.geom" />
+    <CopyFileToFolders Include="shaders\shader.vert" />
+  </ItemGroup>
 </Project>

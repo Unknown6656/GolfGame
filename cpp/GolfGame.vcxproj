@@ -96,12 +96,26 @@
     <ClInclude Include="main.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\shaders\shader.frag">
+    <Content Include="shaders\shader.frag">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\shaders\shader.vert">
+    <Content Include="shaders\shader.geom">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="shaders\shader.vert">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="shaders\shader.frag">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="shaders\shader.geom">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="shaders\shader.vert">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
