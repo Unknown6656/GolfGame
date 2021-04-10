@@ -4,6 +4,12 @@
 
 unsigned int program_handle;
 unsigned int VBO, VAO, EBO;
+std::vector<glm::vec3> vertices;
+std::vector<int> indices;
+
+int uniform_time;
+
+GolfCourse* course = nullptr;
 
 
 int __cdecl main(const int argc, const char** const argv)
@@ -13,6 +19,11 @@ int __cdecl main(const int argc, const char** const argv)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, VERSION_MIN);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+#ifdef DOUBLE_BUFFERING
+    glfwWindowHint(GLFW_DOUBLEBUFFER, GL_TRUE);
+#else
+    glfwWindowHint(GLFW_DOUBLEBUFFER, GL_FALSE);
+#endif
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
 #endif
@@ -22,7 +33,10 @@ int __cdecl main(const int argc, const char** const argv)
     if (!window)
         std::cout << "Failed to create GLFW window." << std::endl;
     else
+    {
         glfwMakeContextCurrent(window);
+        glfwSwapInterval(0);
+    }
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
         std::cout << "Failed to initialize GLAD" << std::endl;
@@ -37,17 +51,39 @@ int __cdecl main(const int argc, const char** const argv)
 
     if (!exit_code)
     {
+        double curr_time, disp_time = glfwGetTime();
+        int frames = 0;
+
         while (!glfwWindowShouldClose(window))
         {
+            curr_time = glfwGetTime();
+
+            if ((curr_time - disp_time) >= FPS_INTERVAL)
+            {
+                std::string title = "Golf Game   [" + std::to_string(frames / (curr_time - disp_time)) + " FPS]";
+
+                glfwSetWindowTitle(window, title.c_str());
+
+                frames = 0;
+                disp_time = curr_time;
+            }
+            else
+                ++frames;
+
             window_process_input(window);
             window_render(window);
-
+#ifdef DOUBLE_BUFFERING
             glfwSwapBuffers(window);
+#else
+            glFlush();
+#endif
             glfwPollEvents();
         }
 
         window_unload(window);
     }
+
+    delete course;
 
     glfwTerminate();
 
@@ -107,7 +143,7 @@ unsigned int compile_shader(const std::string path, const GLenum type)
     const char* c_source = source.c_str();
     const unsigned int shader = glCreateShader(type);
 
-    glShaderSource(shader, 1, &c_source, NULL);
+    glShaderSource(shader, 1, &c_source, nullptr);
     glCompileShader(shader);
 
     int success;
@@ -115,22 +151,25 @@ unsigned int compile_shader(const std::string path, const GLenum type)
 
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
     glObjectLabel(GL_SHADER, shader, path.length(), path.c_str());
+    glGetShaderInfoLog(shader, 1024, nullptr, log);
 
-    if (!success)
-    {
-        glGetShaderInfoLog(shader, 1024, NULL, log);
+    if (success)
+        strncpy_s(log, "  (no error)", 12);
 
-        std::cout << "failed to compile shader:" << std::endl << log << std::endl;
+    std::cout << "shader compile log for '" << path << "':" << std::endl << log << std::endl;
 
-        return 0;
-    }
-    else
-        return shader;
+    return success ? shader : 0;
 }
 
 int get_attribute_location(const std::string name)
 {
     return glGetAttribLocation(program_handle, name.c_str());
+}
+
+void game_load()
+{
+    course = new GolfCourse(Par::Par4, 420);
+    course->rasterize(10, &vertices, &indices);
 }
 
 int window_load(GLFWwindow* const window)
@@ -141,62 +180,55 @@ int window_load(GLFWwindow* const window)
         glViewport(0, 0, width, height);
     });
 
-    program_handle = glCreateProgram();
+    const unsigned int vert_shader = compile_shader("shaders/shader.vert", GL_VERTEX_SHADER);
+    const unsigned int geom_shader = compile_shader("shaders/shader.geom", GL_GEOMETRY_SHADER);
+    const unsigned int frag_shader = compile_shader("shaders/shader.frag", GL_FRAGMENT_SHADER);
 
-    const unsigned int vert_shader = compile_shader("shader.vert", GL_VERTEX_SHADER);
-    const unsigned int frag_shader = compile_shader("shader.frag", GL_FRAGMENT_SHADER);
-
-    if (!vert_shader && !frag_shader)
+    if (!vert_shader && !frag_shader) // &&!geom_shader
         return -1;
 
+    program_handle = glCreateProgram();
+
     glAttachShader(program_handle, vert_shader);
+    //glAttachShader(program_handle, geom_shader);
     glAttachShader(program_handle, frag_shader);
     glLinkProgram(program_handle);
+
+    int success = 0;
+    char log[1024];
+
+    glGetProgramiv(program_handle, GL_LINK_STATUS, &success);
+    glGetProgramInfoLog(program_handle, 1024, nullptr, log);
+
+    if (success)
+        strncpy_s(log, "  (no error)", 12);
+
+    std::cout << "program link log:" << std::endl << log << std::endl << std::endl;
+
+    if (!success)
+        return -1;
+
     glUseProgram(program_handle);
     glDeleteShader(vert_shader);
+    glDeleteShader(geom_shader);
     glDeleteShader(frag_shader);
 
+    uniform_time = get_attribute_location("uniform_time");
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-    float vertices[] = {
-         0.5f,  0.5f, 0.0f,  // top right
-         0.5f, -0.5f, 0.0f,  // bottom right
-        -0.5f, -0.5f, 0.0f,  // bottom left
-        -0.5f,  0.5f, 0.0f   // top left 
-    };
-    unsigned int indices[] = {
-        0, 1, 3,  // first Triangle
-        1, 2, 3   // second Triangle
-    };
+    game_load();
 
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
-
     glBindVertexArray(VAO);
-
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(int), &indices[0], GL_STATIC_DRAW);
 
+    const int vertex_attrib = get_attribute_location("position");
 
-    const int vertex_attrib = get_attribute_location("aPosition");
-
-    glVertexAttribPointer(vertex_attrib, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
+    glVertexAttribPointer(vertex_attrib, sizeof(glm::vec3) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(glm::vec3), nullptr);
     glEnableVertexAttribArray(vertex_attrib);
 
     //glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -223,18 +255,27 @@ void window_unload(GLFWwindow* const)
 
 void window_render(GLFWwindow* const)
 {
+    float time = glfwGetTime();
+
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgram(program_handle);
+    glUniform1f(uniform_time, time);
     glBindVertexArray(VAO);
     // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-    //glDrawArrays(GL_TRIANGLES, 0, 6);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    //glDrawArrays(GL_TRIANGLES, 0, indices.size());
+    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 }
 
 void window_process_input(GLFWwindow* const window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
 }

@@ -105,6 +105,7 @@ struct GolfCourse
             const float z = (float)iz / size;
             const float y = .0f;
 
+            //(*vertices)[i] = glm::vec3(x, y, z);
             (*vertices)[i] = glm::vec3(x, z, y);
 
             if (ix < size && iz < size)
