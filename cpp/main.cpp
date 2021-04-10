@@ -28,7 +28,9 @@ int __cdecl main(const int argc, const char** const argv)
         std::cout << "Failed to initialize GLAD" << std::endl;
     else if (window)
     {
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glad_glDebugMessageCallback(gl_debug, nullptr);
+        glfwSetErrorCallback(gl_error);
 
         exit_code = window_load(window);
     }
@@ -87,7 +89,12 @@ void __stdcall gl_debug(GLenum source, GLenum type, GLuint id, GLenum severity, 
         case 37192: s_severity = "Low"; break;
     }
 
-    std::cout << id << ": " << s_source << ", " << s_type << ", " << s_severity << " | " << message << std::endl;
+    std::cout << "[GL Debug]   " << id << ": " << s_source << ", " << s_type << ", " << s_severity << " | " << message << std::endl;
+}
+
+void gl_error(int error_code, const char* message)
+{
+    std::cout << "[GLFW Error] " << error_code << " | " << message << std::endl;
 }
 
 unsigned int compile_shader(const std::string path, const GLenum type)
