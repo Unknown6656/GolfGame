@@ -22,7 +22,7 @@
 
 
 int __cdecl main(const int, const char** const);
-
+void __stdcall gl_debug(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, const void*);
 unsigned int compile_shader(const std::string, const GLenum);
 int get_attribute_location(const std::string);
 

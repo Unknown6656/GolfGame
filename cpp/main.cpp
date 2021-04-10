@@ -12,10 +12,10 @@ int __cdecl main(const int argc, const char** const argv)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, VERSION_MAJ);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, VERSION_MIN);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
 #endif
-
     GLFWwindow* const window = glfwCreateWindow(INIT_WIDTH, INIT_HEIGHT, "Golf Game", nullptr, nullptr);
     int exit_code = -1;
 
@@ -27,7 +27,11 @@ int __cdecl main(const int argc, const char** const argv)
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
         std::cout << "Failed to initialize GLAD" << std::endl;
     else if (window)
+    {
+        glad_glDebugMessageCallback(gl_debug, nullptr);
+
         exit_code = window_load(window);
+    }
 
     if (!exit_code)
     {
@@ -46,6 +50,44 @@ int __cdecl main(const int argc, const char** const argv)
     glfwTerminate();
 
     return exit_code;
+}
+
+void __stdcall gl_debug(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei, const GLchar* message, const void*)
+{
+    std::string s_source = "DontCare", s_type = "DontCare", s_severity = "DontCare";
+
+    switch (source)
+    {
+        case 33350: s_source = "API"; break;
+        case 33351: s_source = "WindowSystem"; break;
+        case 33352: s_source = "ShaderCompiler"; break;
+        case 33353: s_source = "3rdParty"; break;
+        case 33354: s_source = "Application"; break;
+        case 33355: s_source = "Other"; break;
+    }
+
+    switch (type)
+    {
+        case 33356: s_type = "Error"; break;
+        case 33357: s_type = "DeprecatedBehavior"; break;
+        case 33358: s_type = "UndefinedBehavior"; break;
+        case 33359: s_type = "Portability"; break;
+        case 33360: s_type = "Performance"; break;
+        case 33361: s_type = "Other"; break;
+        case 33384: s_type = "Marker"; break;
+        case 33385: s_type = "PushGroup"; break;
+        case 33386: s_type = "PopGroup"; break;
+    }
+
+    switch (severity)
+    {
+        case 33387: s_severity = "Notification"; break;
+        case 37190: s_severity = "High"; break;
+        case 37191: s_severity = "Medium"; break;
+        case 37192: s_severity = "Low"; break;
+    }
+
+    std::cout << id << ": " << s_source << ", " << s_type << ", " << s_severity << " | " << message << std::endl;
 }
 
 unsigned int compile_shader(const std::string path, const GLenum type)
@@ -150,14 +192,14 @@ int window_load(GLFWwindow* const window)
     glVertexAttribPointer(vertex_attrib, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
     glEnableVertexAttribArray(vertex_attrib);
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    //glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     // remember: do NOT unbind the EBO while a VAO is active as the bound element buffer object IS stored in the VAO; keep the EBO bound.
     //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
     // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-    glBindVertexArray(0);
+    //glBindVertexArray(0);
 
 
 
