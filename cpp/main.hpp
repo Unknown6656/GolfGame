@@ -1,28 +1,11 @@
 #pragma once
 
-#define GLEW_STATIC
-#define VERSION_MAJ 4
-#define VERSION_MIN 6
 #define INIT_WIDTH 1440
 #define INIT_HEIGHT 900
 #define FPS_INTERVAL .07
 
 #define DOUBLE_BUFFERING
 
-
-#include <iostream>
-#include <fstream>
-#include <cstdio>
-#include <windows.h>
-#include <string>
-#include <vector>
-
-// #include <GL/glew.h>
-// #include <GL/wglew.h>
-// #include <GL/glu.h>
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-//#include <KHR/khrplatform.h>
 
 #include "game.hpp"
 

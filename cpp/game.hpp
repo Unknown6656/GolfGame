@@ -1,24 +1,7 @@
 ﻿#pragma once
 
-#define _USE_MATH_DEFINES
+#include "shader.hpp"
 
-#include <vector>
-#include <random>
-#include <math.h>
-#include <cmath>
-
-#include <glm/glm.hpp>
-
-
-inline float randf() noexcept
-{
-    return (static_cast<float>(rand()) / static_cast<float>(RAND_MAX));
-}
-
-inline float randf(const float max) noexcept
-{
-    return randf() * max;
-}
 
 
 enum class Par
@@ -28,17 +11,34 @@ enum class Par
     Par5 = 2
 };
 
+struct VertexData
+{
+    glm::vec3 position;
+};
+
+struct SizedVec2
+{
+    glm::vec2 position;
+    float size;
+};
+
+struct RasterizationData
+{
+    std::vector<VertexData> vertices;
+    std::vector<int> indices;
+    Par par;
+    SizedVec2 start;
+    glm::vec2 mid[2];
+    SizedVec2 end;
+};
+
 struct GolfCourse
 {
     int _seed;
     Par _par;
-    glm::vec2 _course_start_position;
+    SizedVec2 _course_start_position;
     std::vector<glm::vec2> _course_midway_points;
-    struct
-    {
-        glm::vec2 position;
-        float size;
-    } _course_putting_green;
+    SizedVec2 _course_putting_green;
 
 
     GolfCourse(const Par par, const int seed)
@@ -50,19 +50,20 @@ struct GolfCourse
 
         const float margin = .39f - ((int)par - (int)Par::Par3) * .13f;
 
-        _course_start_position = glm::vec2(randf(margin), randf());
+        _course_start_position.position = glm::vec2(randf(margin), randf());
+        _course_start_position.size = .1f;
         _course_putting_green.position = glm::vec2(randf(margin) + (1 - margin), randf());
-        _course_putting_green.size = randf(.15f);
+        _course_putting_green.size = randf(.15f) + .5f;
 
         const float φ = std::atan2f(
-            _course_putting_green.position.y - _course_start_position.y,
-            _course_putting_green.position.x - _course_start_position.x
+            _course_putting_green.position.y - _course_start_position.position.y,
+            _course_putting_green.position.x - _course_start_position.position.x
         ) + .5f * M_PI;
         const auto lerp = [&](const float f) -> glm::vec2
         {
             return glm::vec2(
-                f * _course_start_position.x + (1 - f) * _course_putting_green.position.x,
-                f * _course_start_position.y + (1 - f) * _course_putting_green.position.y
+                f * _course_start_position.position.x + (1 - f) * _course_putting_green.position.x,
+                f * _course_start_position.position.y + (1 - f) * _course_putting_green.position.y
             );
         };
 
@@ -92,12 +93,21 @@ struct GolfCourse
             _course_midway_points = std::vector<glm::vec2>();
     }
 
-    void rasterize(const int size, std::vector<glm::vec3>* const vertices, std::vector<int>* const indices) const
+    void rasterize(int size, RasterizationData* const data) const
     {
-        *vertices = std::vector<glm::vec3>((size + 1) * (size + 1));
-        *indices = std::vector<int>(size * size * 6);
+        if (size < 1)
+            size = 1;
 
-        for (int i = 0; i < vertices->size(); ++i)
+        *data = RasterizationData();
+        data->vertices = std::vector<VertexData>((size + 1) * (size + 1));
+        data->indices = std::vector<int>(size * size * 6);
+        data->par = _par;
+        data->start = _course_start_position;
+        data->end = _course_putting_green;
+        data->mid[0] = _course_midway_points.size() ? _course_midway_points[0] : glm::vec2();
+        data->mid[1] = _course_midway_points.size() > 1 ? _course_midway_points[1] : glm::vec2();
+
+        for (int i = 0; i < data->vertices.size(); ++i)
         {
             const int ix = i % (size + 1);
             const int iz = i / (size + 1);
@@ -105,17 +115,17 @@ struct GolfCourse
             const float z = (float)iz / size;
             const float y = .0f;
 
-            //(*vertices)[i] = glm::vec3(x, y, z);
-            (*vertices)[i] = glm::vec3(x, z, y);
+            // data->vertices[i].position = glm::vec3(x, y, z);
+            data->vertices[i].position = glm::vec3(x, z, y);
 
             if (ix < size && iz < size)
             {
-                (*indices)[(ix + iz * size) * 6 + 0] = ix + iz * (size + 1);
-                (*indices)[(ix + iz * size) * 6 + 1] =
-                (*indices)[(ix + iz * size) * 6 + 3] = ix + 1 + iz * (size + 1);
-                (*indices)[(ix + iz * size) * 6 + 4] = ix + 1 + (iz + 1) * (size + 1);
-                (*indices)[(ix + iz * size) * 6 + 2] =
-                (*indices)[(ix + iz * size) * 6 + 5] = ix + (iz + 1) * (size + 1);
+                data->indices[(ix + iz * size) * 6 + 0] = ix + iz * (size + 1);
+                data->indices[(ix + iz * size) * 6 + 1] =
+                data->indices[(ix + iz * size) * 6 + 3] = ix + 1 + iz * (size + 1);
+                data->indices[(ix + iz * size) * 6 + 4] = ix + 1 + (iz + 1) * (size + 1);
+                data->indices[(ix + iz * size) * 6 + 2] =
+                data->indices[(ix + iz * size) * 6 + 5] = ix + (iz + 1) * (size + 1);
             }
         }
     }
