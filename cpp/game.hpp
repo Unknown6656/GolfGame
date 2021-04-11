@@ -14,6 +14,7 @@ enum class Par
 struct VertexData
 {
     glm::vec3 position;
+    // TODO : more?
 };
 
 struct SizedVec2

@@ -1,8 +1,9 @@
-#version 460 core
+#include "common.glsl"
+
 
 precision highp float;
 
-layout(location = 0) in vec3 position;
+in vec3 position;
 
 out vec4 vertex_position;
 
