@@ -2,13 +2,10 @@
 
 #include "main.hpp"
 
-unsigned int program_handle;
+Shader* shader = nullptr;
 unsigned int VBO, VAO, EBO;
-std::vector<glm::vec3> vertices;
-std::vector<int> indices;
 
-int uniform_time;
-
+RasterizationData rasterization_data;
 GolfCourse* course = nullptr;
 
 
@@ -84,6 +81,7 @@ int __cdecl main(const int argc, const char** const argv)
     }
 
     delete course;
+    delete shader;
 
     glfwTerminate();
 
@@ -133,43 +131,10 @@ void gl_error(int error_code, const char* message)
     std::cout << "[GLFW Error] " << error_code << " | " << message << std::endl;
 }
 
-unsigned int compile_shader(const std::string path, const GLenum type)
-{
-    std::ifstream stream(path);
-    std::string source(
-        (std::istreambuf_iterator<char>(stream)),
-        (std::istreambuf_iterator<char>())
-    );
-    const char* c_source = source.c_str();
-    const unsigned int shader = glCreateShader(type);
-
-    glShaderSource(shader, 1, &c_source, nullptr);
-    glCompileShader(shader);
-
-    int success;
-    char log[1024];
-
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    glObjectLabel(GL_SHADER, shader, path.length(), path.c_str());
-    glGetShaderInfoLog(shader, 1024, nullptr, log);
-
-    if (success)
-        strncpy_s(log, "  (no error)", 12);
-
-    std::cout << "shader compile log for '" << path << "':" << std::endl << log << std::endl;
-
-    return success ? shader : 0;
-}
-
-int get_attribute_location(const std::string name)
-{
-    return glGetAttribLocation(program_handle, name.c_str());
-}
-
 void game_load()
 {
     course = new GolfCourse(Par::Par4, 420);
-    course->rasterize(10, &vertices, &indices);
+    course->rasterize(10, &rasterization_data);
 }
 
 int window_load(GLFWwindow* const window)
@@ -180,40 +145,12 @@ int window_load(GLFWwindow* const window)
         glViewport(0, 0, width, height);
     });
 
-    const unsigned int vert_shader = compile_shader("shaders/shader.vert", GL_VERTEX_SHADER);
-    const unsigned int geom_shader = compile_shader("shaders/shader.geom", GL_GEOMETRY_SHADER);
-    const unsigned int frag_shader = compile_shader("shaders/shader.frag", GL_FRAGMENT_SHADER);
+    shader = new Shader("shaders/shader.vert", /*"shaders/shader.geom"*/ "", "shaders/shader.frag");
 
-    if (!vert_shader && !frag_shader) // &&!geom_shader
+    if (shader->success)
+        shader->use();
+    else
         return -1;
-
-    program_handle = glCreateProgram();
-
-    glAttachShader(program_handle, vert_shader);
-    //glAttachShader(program_handle, geom_shader);
-    glAttachShader(program_handle, frag_shader);
-    glLinkProgram(program_handle);
-
-    int success = 0;
-    char log[1024];
-
-    glGetProgramiv(program_handle, GL_LINK_STATUS, &success);
-    glGetProgramInfoLog(program_handle, 1024, nullptr, log);
-
-    if (success)
-        strncpy_s(log, "  (no error)", 12);
-
-    std::cout << "program link log:" << std::endl << log << std::endl << std::endl;
-
-    if (!success)
-        return -1;
-
-    glUseProgram(program_handle);
-    glDeleteShader(vert_shader);
-    glDeleteShader(geom_shader);
-    glDeleteShader(frag_shader);
-
-    uniform_time = get_attribute_location("uniform_time");
 
     game_load();
 
@@ -222,13 +159,13 @@ int window_load(GLFWwindow* const window)
     glGenBuffers(1, &EBO);
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, rasterization_data.vertices.size() * sizeof(VertexData), &rasterization_data.vertices[0], GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(int), &indices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, rasterization_data.indices.size() * sizeof(int), &rasterization_data.indices[0], GL_STATIC_DRAW);
 
-    const int vertex_attrib = get_attribute_location("position");
+    const int vertex_attrib = shader->get_attrib("position");
 
-    glVertexAttribPointer(vertex_attrib, sizeof(glm::vec3) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(glm::vec3), nullptr);
+    glVertexAttribPointer(vertex_attrib, sizeof(VertexData) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), nullptr);
     glEnableVertexAttribArray(vertex_attrib);
 
     //glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -250,7 +187,7 @@ void window_unload(GLFWwindow* const)
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
-    glDeleteProgram(program_handle);
+    glDeleteProgram(shader->program_handle);
 }
 
 void window_render(GLFWwindow* const)
@@ -260,8 +197,9 @@ void window_render(GLFWwindow* const)
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glUseProgram(program_handle);
-    glUniform1f(uniform_time, time);
+    shader->use();
+    shader->set_float("uniform_time", time);
+
     glBindVertexArray(VAO);
     // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
     //glDrawArrays(GL_TRIANGLES, 0, indices.size());
