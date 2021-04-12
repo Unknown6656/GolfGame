@@ -5,6 +5,13 @@
 Shader* shader = nullptr;
 unsigned int VBO, VAO, EBO;
 
+bool ortho = false;
+float pov = 35.0f;
+float rotation_angle = 20.f;
+glm::vec3 look_at = glm::vec3(0.f, 0.f, 0.f);
+glm::vec3 camera_position = glm::vec3(0.f, 2.f, 3.f);
+
+
 RasterizationData rasterization_data;
 GolfCourse* course = nullptr;
 
@@ -163,21 +170,14 @@ int window_load(GLFWwindow* const window)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, rasterization_data.indices.size() * sizeof(int), &rasterization_data.indices[0], GL_STATIC_DRAW);
 
-    const int vertex_attrib = shader->get_attrib("position");
+    const int vertex_position = shader->get_attrib(nameof(vertex_position));
+    const int vertex_color = shader->get_attrib(nameof(vertex_color));
 
-    glVertexAttribPointer(vertex_attrib, sizeof(VertexData) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), nullptr);
-    glEnableVertexAttribArray(vertex_attrib);
+    glVertexAttribPointer(vertex_position, sizeof(glm::vec3) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)0);
+    glEnableVertexAttribArray(vertex_position);
 
-    //glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    // remember: do NOT unbind the EBO while a VAO is active as the bound element buffer object IS stored in the VAO; keep the EBO bound.
-    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-    // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-    // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-    //glBindVertexArray(0);
-
-
+    glVertexAttribPointer(vertex_color, sizeof(glm::vec4) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)sizeof(glm::vec3));
+    glEnableVertexAttribArray(vertex_color);
 
     return 0;
 }
@@ -190,30 +190,66 @@ void window_unload(GLFWwindow* const)
     glDeleteProgram(shader->program_handle);
 }
 
-void window_render(GLFWwindow* const)
+void window_render(GLFWwindow* const window)
 {
-    float time = glfwGetTime();
+    const float time = glfwGetTime();
+    int width, height;
 
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glfwGetWindowSize(window, &width, &height);
+
+    glClearColor(.2f, .3f, .3f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    const glm::mat4 model = glm::translate(
+        glm::rotate(
+            glm::mat4(1.f),
+            glm::radians(rotation_angle),
+            glm::vec3(0.f, 1.f, 0.f)
+        ),
+        glm::vec3(-.5f, 0.f, -.5f)
+    );
+    const glm::mat4 view = glm::lookAt(camera_position, look_at, glm::vec3(0.f, 1.f, 0.f));
+    const glm::mat4 proj = ortho ? glm::ortho<float>(0, width, 0, height, F_NEAR, F_FAR)
+                                 : glm::perspective(glm::radians(pov / 2), (float)width / (float)height, F_NEAR, F_FAR);
 
     shader->use();
     shader->set_float("uniform_time", time);
+    shader->set_mat4("uniform_model", model);
+    shader->set_mat4("uniform_view", view);
+    shader->set_mat4("uniform_projection", proj);
 
     glBindVertexArray(VAO);
-    // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-    //glDrawArrays(GL_TRIANGLES, 0, indices.size());
     glDrawElements(GL_TRIANGLES, rasterization_data.indices.size(), GL_UNSIGNED_INT, 0);
 }
 
 void window_process_input(GLFWwindow* const window)
 {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+#define pressed(x) glfwGetKey(window, x) == GLFW_PRESS
+
+    if (pressed(GLFW_KEY_ESCAPE))
         glfwSetWindowShouldClose(window, true);
-    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+    if (pressed(GLFW_KEY_1))
+    {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+        glLineWidth(1);
+        glPointSize(1);
+    }
+    if (pressed(GLFW_KEY_2))
+    {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
+        glLineWidth(2.5f);
+        glPointSize(1);
+    }
+    if (pressed(GLFW_KEY_3))
+    {
         glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+        glLineWidth(1);
+        glPointSize(3.5f);
+    }
+    if (pressed(GLFW_KEY_4))
+        ortho = false;
+    if (pressed(GLFW_KEY_5))
+        ortho = true;
+
+#undef pressed
 }

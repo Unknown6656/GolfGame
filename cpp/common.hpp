@@ -6,6 +6,9 @@
 #define VERSION_MAJ 4
 #define VERSION_MIN 6
 
+#define F_NEAR .01f
+#define F_FAR 1000.f
+
 
 #include <iostream>
 #include <sstream>
@@ -25,6 +28,11 @@
 #include <GLFW/glfw3.h>
 //#include <KHR/khrplatform.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+
+#define nameof(name) #name
 
 
 inline float randf() noexcept
