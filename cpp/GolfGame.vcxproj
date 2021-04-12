@@ -103,7 +103,13 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="shaders\*">
+    <CopyFileToFolders Include="shaders\shader.frag">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="shaders\shader.geom">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="shaders\shader.vert">
       <FileType>Document</FileType>
     </CopyFileToFolders>
   </ItemGroup>
