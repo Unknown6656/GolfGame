@@ -97,6 +97,8 @@ struct GolfCourse
 
     void rasterize(int size, RasterizationData* const data) const
     {
+#define RADIUS 1.5f
+
         if (size < 1)
             size = 1;
 
@@ -171,8 +173,8 @@ struct GolfCourse
         for (int i = 0; i < edge_count; ++i)
         {
             float θ = i * 2.f * M_PI / (float)edge_count - M_PI * .1875f;
-            float outer_x = .5f + sin(θ) * 1.f;
-            float outer_z = .5f - cos(θ) * 1.f;
+            float outer_x = .5f + sin(θ) * RADIUS;
+            float outer_z = .5f - cos(θ) * RADIUS;
             int inner_1_x = 0;
             int inner_1_z = 0;
             int inner_2_x = 0;

@@ -6,11 +6,18 @@ Shader* shader = nullptr;
 unsigned int VBO, VAO, EBO;
 
 bool ortho = false;
-float pov = 35.0f;
+float pov = 30.0f;
 float rotation_angle = 20.f;
 glm::vec3 look_at = glm::vec3(0.f, 0.f, 0.f);
 glm::vec3 camera_position = glm::vec3(0.f, 2.f, 3.f);
 
+glm::vec4 color_outside_bounds = from_argb(0xFF387B43);
+glm::vec4 color_rough = from_argb(0xFF5C8C46);
+glm::vec4 color_fairway = from_argb(0xFF389A3B);
+glm::vec4 color_tee_box = from_argb(0xFFA8952A);
+glm::vec4 color_bunker = from_argb(0xFFE6C510);
+glm::vec4 color_putting_green = from_argb(0xFF36C12E);
+glm::vec4 color_water = from_argb(0xFF36C9F7);
 
 RasterizationData rasterization_data;
 GolfCourse* course = nullptr;
@@ -141,7 +148,7 @@ void gl_error(int error_code, const char* message)
 void game_load()
 {
     course = new GolfCourse(Par::Par4, 420);
-    course->rasterize(10, &rasterization_data);
+    course->rasterize(20, &rasterization_data);
 }
 
 int window_load(GLFWwindow* const window)
@@ -154,10 +161,17 @@ int window_load(GLFWwindow* const window)
 
     shader = new Shader("shaders/shader.vert", /*"shaders/shader.geom"*/ "", "shaders/shader.frag");
 
-    if (shader->success)
-        shader->use();
-    else
+    if (!shader->success)
         return -1;
+
+    shader->use();
+    shader->set_vec4("u_color_outside_bounds", color_outside_bounds);
+    shader->set_vec4("u_color_tee_box", color_tee_box);
+    shader->set_vec4("u_color_rough", color_rough);
+    shader->set_vec4("u_color_fairway", color_fairway);
+    shader->set_vec4("u_color_bunker", color_bunker);
+    shader->set_vec4("u_color_putting_green", color_putting_green);
+    shader->set_vec4("u_color_water", color_water);
 
     game_load();
 
@@ -213,10 +227,10 @@ void window_render(GLFWwindow* const window)
                                  : glm::perspective(glm::radians(pov / 2), (float)width / (float)height, F_NEAR, F_FAR);
 
     shader->use();
-    shader->set_float("uniform_time", time);
-    shader->set_mat4("uniform_model", model);
-    shader->set_mat4("uniform_view", view);
-    shader->set_mat4("uniform_projection", proj);
+    shader->set_float("u_time", time);
+    shader->set_mat4("u_model", model);
+    shader->set_mat4("u_view", view);
+    shader->set_mat4("u_projection", proj);
 
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, rasterization_data.indices.size(), GL_UNSIGNED_INT, 0);
