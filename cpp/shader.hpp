@@ -143,18 +143,22 @@ private:
         do
         {
             changed = false;
-            source = std::regex_replace(source, reg_include, [&changed](const smatch& m) -> string
+            source = regex_replace_f(source, reg_include, [&](const smatch& m) -> string
             {
-                const string path = m[3].str();
+                const string p = path + "/../" + m[2].str();
+                string content = read_file(p);
+
+                trim(content);
 
                 changed = true;
 
-                return "\n\\\\ ---- begin include '" + path + "' ----\\n"
-                    + read_file(path)
-                    + "\n\\\\ ---- end include '" + path + "' ----\\n";
+                return "\n//---- begin include '" + p + "' ----\n" + content + "\n//---- end include '" + p + "' ----\n";
             });
         }
         while (changed);
+
+        // source = regex_replace_f(source, regex(R"((\s*\/\/.*(\r?\n|$)|[\r\n]+))"), [](const smatch&) { return "\n"; });
+        // trim(source);
 
         const char* c_source = source.c_str();
         const unsigned int shader = glCreateShader(type);
