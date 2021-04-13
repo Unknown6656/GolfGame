@@ -3,10 +3,9 @@
 #include "main.hpp"
 
 
-#define GOLF_SEED 420 // TODO
-
 Shader* shader = nullptr;
 unsigned int VBO, VAO, EBO;
+int seed = 420;
 
 bool ortho = false;
 float pov = 90.0f;
@@ -93,13 +92,9 @@ int __cdecl main(const int argc, const char** const argv)
 #endif
             glfwPollEvents();
         }
-
-        window_unload(window);
     }
 
-    delete course;
-    delete shader;
-
+    window_unload(window);
     glfwTerminate();
 
     return exit_code;
@@ -150,7 +145,7 @@ void gl_error(int error_code, const char* message)
 
 void game_load()
 {
-    course = new GolfCourse(Par::Par4, 2.5f, GOLF_SEED);
+    course = new GolfCourse(Par::Par4, 2.5f, seed);
     course->rasterize(20, &rasterization_data);
 }
 
@@ -171,14 +166,21 @@ int window_load(GLFWwindow* const window)
 
     game_load();
 
-    shader->set_vec4("u_color_outside_bounds", color_outside_bounds);
-    shader->set_vec4("u_color_tee_box", color_tee_box);
-    shader->set_vec4("u_color_rough", color_rough);
-    shader->set_vec4("u_color_fairway", color_fairway);
-    shader->set_vec4("u_color_bunker", color_bunker);
-    shader->set_vec4("u_color_putting_green", color_putting_green);
-    shader->set_vec4("u_color_water", color_water);
+    shader->set_vec4("u_colors.outside_bounds", color_outside_bounds);
+    shader->set_vec4("u_colors.tee_box", color_tee_box);
+    shader->set_vec4("u_colors.rough", color_rough);
+    shader->set_vec4("u_colors.fairway", color_fairway);
+    shader->set_vec4("u_colors.bunker", color_bunker);
+    shader->set_vec4("u_colors.putting_green", color_putting_green);
+    shader->set_vec4("u_colors.water", color_water);
     shader->set_vec2("u_dimensions", rasterization_data.dimensions);
+    shader->set_int( "u_golf_course.par", (int)rasterization_data.par);
+    shader->set_vec2("u_golf_course.start_position", rasterization_data.start.position);
+    shader->set_float("u_golf_course.start_size", rasterization_data.start.size);
+    shader->set_vec2("u_golf_course.mid1_position", rasterization_data.mid[0]);
+    shader->set_vec2("u_golf_course.mid2_position", rasterization_data.mid[1]);
+    shader->set_vec2("u_golf_course.end_position", rasterization_data.end.position);
+    shader->set_float("u_golf_course.end_size", rasterization_data.end.size);
 
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -211,6 +213,12 @@ void window_unload(GLFWwindow* const)
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
     glDeleteProgram(shader->program_handle);
+
+    delete course;
+    delete shader;
+
+    course = nullptr;
+    shader = nullptr;
 }
 
 void window_render(GLFWwindow* const window)
@@ -273,6 +281,16 @@ void window_process_input(GLFWwindow* const window)
         ortho = false;
     if (pressed(GLFW_KEY_5))
         ortho = true;
+    if (pressed(GLFW_KEY_R))
+    {
+        Sleep(100);
+
+        seed += 7;
+
+        window_unload(window);
+        window_load(window);
+        glfwPollEvents();
+    }
 
 #undef pressed
 }
