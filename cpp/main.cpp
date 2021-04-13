@@ -56,8 +56,14 @@ int __cdecl main(const int argc, const char** const argv)
     else if (window)
     {
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glEnable(GL_DEPTH_TEST);
         glad_glDebugMessageCallback(gl_debug, nullptr);
         glfwSetErrorCallback(gl_error);
+
+        std::cout << glGetString(GL_RENDERER) << std::endl
+                  << glGetString(GL_VERSION) << std::endl
+                  << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl
+                  << glGetString(GL_VENDOR) << std::endl << std::endl;
 
         exit_code = window_load(window);
     }
@@ -229,7 +235,7 @@ void window_render(GLFWwindow* const window)
     glfwGetWindowSize(window, &width, &height);
 
     glClearColor(.2f, .3f, .3f, 1.f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     const glm::mat4 model = glm::translate(
         glm::rotate(
