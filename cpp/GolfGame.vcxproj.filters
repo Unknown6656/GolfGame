@@ -46,4 +46,7 @@
     <CopyFileToFolders Include="shaders\*" />
     <CopyFileToFolders Include="shaders\*" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\common.glsl" />
+  </ItemGroup>
 </Project>
