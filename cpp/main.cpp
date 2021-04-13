@@ -3,8 +3,11 @@
 #include "main.hpp"
 
 
-Shader* shader = nullptr;
-unsigned int VBO, VAO, EBO;
+Shader* shader_main = nullptr;
+Shader* shader_post = nullptr;
+unsigned int FBO, RBO, TEX; // framebuffer, renderbuffer, and texturebuffer
+unsigned int VBO_golf, VAO_golf, EBO_golf; // actual geometry
+unsigned int VBO_quad, VAO_quad; // post-processing quad
 int seed = 420;
 
 bool ortho = false;
@@ -158,73 +161,137 @@ void game_load()
 int window_load(GLFWwindow* const window)
 {
     glViewport(0, 0, INIT_WIDTH, INIT_HEIGHT);
-    glfwSetFramebufferSizeCallback(window, [](GLFWwindow*, int width, int height)
-    {
-        glViewport(0, 0, width, height);
-    });
+    glfwSetFramebufferSizeCallback(window, window_resize);
 
-    shader = new Shader("shaders/shader.vert", /*"shaders/shader.geom"*/ "", "shaders/shader.frag");
+    shader_main = new Shader("shaders/shader.vert", /*"shaders/shader.geom"*/ "", "shaders/shader.frag");
+    shader_post = new Shader("shaders/post-process.vert", "", "shaders/post-process.frag");
 
-    if (!shader->success)
+    if (!shader_main->success || !shader_post->success)
         return -1;
 
-    shader->use();
+    shader_main->use();
 
     game_load();
 
-    shader->set_vec4("u_colors.outside_bounds", color_outside_bounds);
-    shader->set_vec4("u_colors.tee_box", color_tee_box);
-    shader->set_vec4("u_colors.rough", color_rough);
-    shader->set_vec4("u_colors.fairway", color_fairway);
-    shader->set_vec4("u_colors.bunker", color_bunker);
-    shader->set_vec4("u_colors.putting_green", color_putting_green);
-    shader->set_vec4("u_colors.water", color_water);
-    shader->set_vec2("u_dimensions", rasterization_data.dimensions);
-    shader->set_int( "u_golf_course.par", (int)rasterization_data.par);
-    shader->set_vec2("u_golf_course.start_position", rasterization_data.start.position);
-    shader->set_float("u_golf_course.start_size", rasterization_data.start.size);
-    shader->set_vec2("u_golf_course.mid1_position", rasterization_data.mid[0]);
-    shader->set_vec2("u_golf_course.mid2_position", rasterization_data.mid[1]);
-    shader->set_vec2("u_golf_course.end_position", rasterization_data.end.position);
-    shader->set_float("u_golf_course.end_size", rasterization_data.end.size);
+    shader_main->set_vec4("u_colors.outside_bounds", color_outside_bounds);
+    shader_main->set_vec4("u_colors.tee_box", color_tee_box);
+    shader_main->set_vec4("u_colors.rough", color_rough);
+    shader_main->set_vec4("u_colors.fairway", color_fairway);
+    shader_main->set_vec4("u_colors.bunker", color_bunker);
+    shader_main->set_vec4("u_colors.putting_green", color_putting_green);
+    shader_main->set_vec4("u_colors.water", color_water);
+    shader_main->set_vec2("u_dimensions", rasterization_data.dimensions);
+    shader_main->set_int( "u_golf_course.par", (int)rasterization_data.par);
+    shader_main->set_vec2("u_golf_course.start_position", rasterization_data.start.position);
+    shader_main->set_float("u_golf_course.start_size", rasterization_data.start.size);
+    shader_main->set_vec2("u_golf_course.mid1_position", rasterization_data.mid[0]);
+    shader_main->set_vec2("u_golf_course.mid2_position", rasterization_data.mid[1]);
+    shader_main->set_vec2("u_golf_course.end_position", rasterization_data.end.position);
+    shader_main->set_float("u_golf_course.end_size", rasterization_data.end.size);
 
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+    glGenVertexArrays(1, &VAO_golf);
+    glGenBuffers(1, &VBO_golf);
+    glGenBuffers(1, &EBO_golf);
+    glBindVertexArray(VAO_golf);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_golf);
     glBufferData(GL_ARRAY_BUFFER, rasterization_data.vertices.size() * sizeof(VertexData), &rasterization_data.vertices[0], GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_golf);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, rasterization_data.indices.size() * sizeof(int), &rasterization_data.indices[0], GL_STATIC_DRAW);
 
-    const int vertex_position = shader->get_attrib(nameof(vertex_position));
-    const int vertex_coords = shader->get_attrib(nameof(vertex_coords));
-    const int vertex_color = shader->get_attrib(nameof(vertex_color));
+    const int vertex_position = shader_main->get_attrib(nameof(vertex_position));
+    const int vertex_coords = shader_main->get_attrib(nameof(vertex_coords));
+    const int vertex_color = shader_main->get_attrib(nameof(vertex_color));
 
     glVertexAttribPointer(vertex_position, sizeof(glm::vec3) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)0);
     glEnableVertexAttribArray(vertex_position);
-
-    glVertexAttribPointer(vertex_coords, sizeof(glm::vec2) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(vertex_coords, sizeof(glm::vec2) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)sizeof(glm::vec3));
     glEnableVertexAttribArray(vertex_coords);
-
-    glVertexAttribPointer(vertex_color, sizeof(glm::vec4) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)(5 * sizeof(float)));
+    glVertexAttribPointer(vertex_color, sizeof(glm::vec4) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)(sizeof(glm::vec3) + sizeof(glm::vec2)));
     glEnableVertexAttribArray(vertex_color);
+
+
+    shader_post->use();
+    shader_post->set_int("u_screen_texture", 0);
+
+    const int screen_position = shader_post->get_attrib(nameof(screen_position));
+    const int screen_coords = shader_post->get_attrib(nameof(screen_coords));
+    const glm::vec2 quad_vertices[] =
+    {
+        // positions             // texcoords
+        glm::vec2(-1.f,  1.f),   glm::vec2(0.f, 1.f),
+        glm::vec2(-1.f, -1.f),   glm::vec2(0.f, 0.f),
+        glm::vec2( 1.f, -1.f),   glm::vec2(1.f, 0.f),
+
+        glm::vec2(-1.f,  1.f),   glm::vec2(0.f, 1.f),
+        glm::vec2( 1.f, -1.f),   glm::vec2(1.f, 0.f),
+        glm::vec2( 1.f,  1.f),   glm::vec2(1.f, 1.f),
+    };
+
+    glGenVertexArrays(1, &VAO_quad);
+    glGenBuffers(1, &VBO_quad);
+    glBindVertexArray(VAO_quad);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_quad);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vertices), &quad_vertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(screen_position);
+    glVertexAttribPointer(screen_position, sizeof(glm::vec2) / sizeof(float), GL_FLOAT, GL_FALSE, 2 * sizeof(glm::vec2), nullptr);
+    glEnableVertexAttribArray(screen_coords);
+    glVertexAttribPointer(screen_coords, sizeof(glm::vec2) / sizeof(float), GL_FLOAT, GL_FALSE, 2 * sizeof(glm::vec2), (void*)sizeof(glm::vec2));
+
+
+    glGenFramebuffers(1, &FBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
+    glGenTextures(1, &TEX);
+    glBindTexture(GL_TEXTURE_2D, TEX);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, INIT_WIDTH, INIT_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, TEX, 0);
+
+    glGenRenderbuffers(1, &RBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, INIT_WIDTH, INIT_HEIGHT);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     return 0;
 }
 
+void window_resize(GLFWwindow* const, int width, int height)
+{
+    glViewport(0, 0, width, height);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glBindTexture(GL_TEXTURE_2D, TEX);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, TEX, 0);
+
+    glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+}
+
 void window_unload(GLFWwindow* const)
 {
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
-    glDeleteProgram(shader->program_handle);
+    glDeleteVertexArrays(1, &VAO_golf);
+    glDeleteBuffers(1, &VBO_golf);
+    glDeleteBuffers(1, &EBO_golf);
+    glDeleteProgram(shader_main->program_handle);
+    glDeleteProgram(shader_post->program_handle);
+    glDeleteFramebuffers(1, &FBO);
 
     delete course;
-    delete shader;
+    delete shader_main;
+    delete shader_post;
 
     course = nullptr;
-    shader = nullptr;
+    shader_main = nullptr;
+    shader_post = nullptr;
 }
 
 void window_render(GLFWwindow* const window)
@@ -234,6 +301,8 @@ void window_render(GLFWwindow* const window)
 
     glfwGetWindowSize(window, &width, &height);
 
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glEnable(GL_DEPTH_TEST);
     glClearColor(.2f, .3f, .3f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -249,14 +318,25 @@ void window_render(GLFWwindow* const window)
     const glm::mat4 proj = ortho ? glm::ortho<float>(0, width, 0, height, F_NEAR, F_FAR)
                                  : glm::perspective(glm::radians(pov / 2), (float)width / (float)height, F_NEAR, F_FAR);
 
-    shader->use();
-    shader->set_float("u_time", time);
-    shader->set_mat4("u_model", model);
-    shader->set_mat4("u_view", view);
-    shader->set_mat4("u_projection", proj);
+    shader_main->use();
+    shader_main->set_float("u_time", time);
+    shader_main->set_mat4("u_model", model);
+    shader_main->set_mat4("u_view", view);
+    shader_main->set_mat4("u_projection", proj);
 
-    glBindVertexArray(VAO);
+    glBindVertexArray(VAO_golf);
     glDrawElements(GL_TRIANGLES, rasterization_data.indices.size(), GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDisable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    shader_post->use();
+
+    glBindVertexArray(VAO_quad);
+    glBindTexture(GL_TEXTURE_2D, TEX);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
 void window_process_input(GLFWwindow* const window)

@@ -1,7 +1,7 @@
 #pragma once
 
-#define INIT_WIDTH 1440
-#define INIT_HEIGHT 900
+#define INIT_WIDTH 1920
+#define INIT_HEIGHT 1080
 #define FPS_INTERVAL .07
 
 #define DOUBLE_BUFFERING
@@ -20,4 +20,5 @@ void game_load();
 int window_load(GLFWwindow* const);
 void window_unload(GLFWwindow* const);
 void window_render(GLFWwindow* const);
+void window_resize(GLFWwindow* const, int, int);
 void window_process_input(GLFWwindow* const);
