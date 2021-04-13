@@ -56,10 +56,16 @@ struct GolfCourse
 
         const float margin = .39f - ((int)par - (int)Par::Par3) * .13f;
 
-        _course_start_position.position = glm::vec2(randf(margin), randf());
         _course_start_position.size = .1f;
-        _course_putting_green.position = glm::vec2(randf(margin) + (length - margin), randf());
-        _course_putting_green.size = randf(.15f) + .5f;
+        _course_start_position.position = glm::vec2(
+            randf(margin) + _course_start_position.size,
+            randf(1.f - 2.f * _course_start_position.size) + _course_start_position.size
+        );
+        _course_putting_green.size = randf(.15f) + .1f;
+        _course_putting_green.position = glm::vec2(
+            randf(margin) + (length - margin - _course_putting_green.size),
+            randf(1.f - 2.f * _course_putting_green.size) + _course_putting_green.size
+        );
 
         const float φ = std::atan2f(
             _course_putting_green.position.y - _course_start_position.position.y,
