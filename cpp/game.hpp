@@ -14,6 +14,7 @@ enum class Par
 struct VertexData
 {
     glm::vec3 position;
+    glm::vec2 coords;
     glm::vec4 color;
     // TODO : more?
 };
@@ -28,6 +29,7 @@ struct RasterizationData
 {
     std::vector<VertexData> vertices;
     std::vector<int> indices;
+    glm::vec2 dimensions;
     Par par;
     SizedVec2 start;
     glm::vec2 mid[2];
@@ -38,23 +40,25 @@ struct GolfCourse
 {
     int _seed;
     Par _par;
+    float _length;
     SizedVec2 _course_start_position;
     std::vector<glm::vec2> _course_midway_points;
     SizedVec2 _course_putting_green;
 
 
-    GolfCourse(const Par par, const int seed)
+    GolfCourse(const Par par, const float length, const int seed)
     {
         std::srand(seed);
 
-        _seed = seed;
         _par = par;
+        _seed = seed;
+        _length = length;
 
         const float margin = .39f - ((int)par - (int)Par::Par3) * .13f;
 
         _course_start_position.position = glm::vec2(randf(margin), randf());
         _course_start_position.size = .1f;
-        _course_putting_green.position = glm::vec2(randf(margin) + (1 - margin), randf());
+        _course_putting_green.position = glm::vec2(randf(margin) + (length - margin), randf());
         _course_putting_green.size = randf(.15f) + .5f;
 
         const float φ = std::atan2f(
@@ -95,19 +99,20 @@ struct GolfCourse
             _course_midway_points = std::vector<glm::vec2>();
     }
 
-    void rasterize(int size, RasterizationData* const data) const
+    void rasterize(const int subdivisions, RasterizationData* const data) const
     {
 #define RADIUS 1.5f
 
-        if (size < 1)
-            size = 1;
-
-        const int inner_count = (size + 1) * (size + 1);
-        const int edge_count = 4 * size;
+        const int size_y = std::max(1, subdivisions);
+        const int size_x = size_y * _length;
+        const float ratio = (float)size_x / size_y;
+        const int inner_count = (size_x + 1) * (size_y + 1);
+        const int edge_count = 2 * size_x + 2 * size_y;
 
         *data = RasterizationData();
+        data->dimensions = glm::vec2(ratio, 1.f);
         data->vertices = std::vector<VertexData>(inner_count + edge_count);
-        data->indices = std::vector<int>(6 * size * size + 6 * edge_count);
+        data->indices = std::vector<int>(6 * size_x * size_y + 6 * edge_count);
         data->par = _par;
         data->start = _course_start_position;
         data->end = _course_putting_green;
@@ -116,79 +121,79 @@ struct GolfCourse
 
         for (int i = 0; i < inner_count; ++i)
         {
-            const int ix = i % (size + 1);
-            const int iz = i / (size + 1);
-            const float x = (float)ix / size;
-            const float z = (float)iz / size;
-            const float y = 0; // .1 * (sin(x * 4) + sin(z * 4));
+            const int ix = i % (size_x + 1);
+            const int iy = i / (size_x + 1);
+            const float x = (float)ix / size_y;
+            const float y = (float)iy / size_y;
+            const float elevation = 0; // .1 * (sin(x * 4) + sin(z * 4));
 
-            data->vertices[i].position = glm::vec3(x, y, z);
-            data->vertices[i].color = glm::vec4(randf(), randf(), randf(), 1);
+            data->vertices[i].position = glm::vec3(x, elevation, y);
+            data->vertices[i].coords = glm::vec2(x / ratio, y);
+            data->vertices[i].color = glm::vec4(0, 0, 0, 1); // TODO
 
-            if (ix < size && iz < size)
+            if (ix < size_x && iy < size_y)
             {
-                const int base_index = 6 * (iz * size + ix);
+                const int base_index = 6 * (iy * size_x + ix);
 
                 // triangle 1
-                data->indices[base_index + 0] = ix + iz * (size + 1);
-                data->indices[base_index + 1] = ix + 1 + iz * (size + 1);
-                data->indices[base_index + 2] = ix + (iz + 1) * (size + 1);
+                data->indices[base_index + 0] = ix + iy * (size_x + 1);
+                data->indices[base_index + 1] = ix + 1 + iy * (size_x + 1);
+                data->indices[base_index + 2] = ix + (iy + 1) * (size_x + 1);
                 // triangle 2
-                data->indices[base_index + 3] = ix + 1 + iz * (size + 1);
-                data->indices[base_index + 4] = ix + 1 + (iz + 1) * (size + 1);
-                data->indices[base_index + 5] = ix + (iz + 1) * (size + 1);
+                data->indices[base_index + 3] = ix + 1 + iy * (size_x + 1);
+                data->indices[base_index + 4] = ix + 1 + (iy + 1) * (size_x + 1);
+                data->indices[base_index + 5] = ix + (iy + 1) * (size_x + 1);
             }
         }
 
-        const auto index_to_edge = [&](int index, int* const x, int* const z) -> int
+        const auto index_to_edge = [&](int index, int* const x, int* const y) -> int
         {
             *x = 0;
-            *z = 0;
+            *y = 0;
 
-            switch (index / size)
+            if (index < size_x)
+                *x = index;
+            else if (index < size_x + size_y)
             {
-                case 0:
-                    *x = index;
-
-                    break;
-                case 1:
-                    *x = size;
-                    *z = index - size;
-
-                    break;
-                case 2:
-                    *x = 3 * size - index;
-                    *z = size;
-
-                    break;
-                case 3:
-                    *z = edge_count - index;
-
-                    break;
+                *x = size_x;
+                *y = index - size_x;
             }
+            else if (index < 2 * size_x + size_y)
+            {
+                *x = 2 * size_x + size_y - index;
+                *y = size_y;
+            }
+            else if (index < edge_count)
+                *y = edge_count - index;
 
-            return *z * (size + 1) + *x;
+            return *y * (size_x + 1) + *x;
         };
 
         for (int i = 0; i < edge_count; ++i)
         {
-            float θ = i * 2.f * M_PI / (float)edge_count - M_PI * .1875f;
-            float outer_x = .5f + sin(θ) * RADIUS;
-            float outer_z = .5f - cos(θ) * RADIUS;
             int inner_1_x = 0;
-            int inner_1_z = 0;
+            int inner_1_y = 0;
             int inner_2_x = 0;
-            int inner_2_z = 0;
+            int inner_2_y = 0;
 
-            const int inner_index_1 = index_to_edge(i, &inner_1_x, &inner_1_z);
-            const int inner_index_2 = index_to_edge(i + 1, &inner_2_x, &inner_2_z);
+            const int inner_index_1 = index_to_edge(i, &inner_1_x, &inner_1_y);
+            const int inner_index_2 = index_to_edge(i + 1, &inner_2_x, &inner_2_y);
             const int outer_index_1 = inner_count + i;
             const int outer_index_2 = inner_count + (i + 1) % edge_count;
 
-            data->vertices[outer_index_1].position = glm::vec3(outer_x, 0, outer_z);
-            data->vertices[outer_index_1].color = glm::vec4(randf(), randf(), randf(), 1);
+            glm::vec2 center(ratio * .5f, .5f);
+            glm::vec2 edge_mid = .5f * (data->vertices[inner_index_1].position.xz() +
+                                        data->vertices[inner_index_2].position.xz());
+            glm::vec2 outer_pos = glm::normalize(edge_mid - center) * RADIUS;
 
-            const int base_index = 6 * size * size + 6 * i;
+            outer_pos.x *= ratio * .5f;
+            outer_pos += center;
+
+            data->vertices[outer_index_1].position = glm::vec3(outer_pos.x, 0, outer_pos.y);
+            data->vertices[outer_index_1].coords = glm::vec2(outer_pos.x / ratio, outer_pos.y);
+            data->vertices[outer_index_1].color = glm::vec4(0, 0, 0, 1); // TODO
+
+            const int base_index = 6 * size_x * size_y + 6 * i;
 
             // triangle 1
             data->indices[base_index + 0] = outer_index_1;
@@ -199,5 +204,7 @@ struct GolfCourse
             data->indices[base_index + 4] = outer_index_2;
             data->indices[base_index + 5] = inner_index_2;
         }
+
+#undef RADIUS
     }
 };
