@@ -121,13 +121,41 @@ public:
     }
 
 private:
-    static unsigned int compile_shader(const std::string& path, const GLenum type)
+    static std::string read_file(const std::string& path)
     {
         std::ifstream stream(path);
-        std::string source(
+
+        return std::string(
             (std::istreambuf_iterator<char>(stream)),
             (std::istreambuf_iterator<char>())
         );
+    }
+
+    static unsigned int compile_shader(const std::string& path, const GLenum type)
+    {
+        using namespace std::regex_constants;
+        using namespace std;
+
+        const regex reg_include(R"R((^|\r?\n)(?:\s*#include\s*"(.+)"\s*)(?=\r?\n|$))R", icase);
+        string source = read_file(path);
+        bool changed;
+
+        do
+        {
+            changed = false;
+            source = std::regex_replace(source, reg_include, [&changed](const smatch& m) -> string
+            {
+                const string path = m[3].str();
+
+                changed = true;
+
+                return "\n\\\\ ---- begin include '" + path + "' ----\\n"
+                    + read_file(path)
+                    + "\n\\\\ ---- end include '" + path + "' ----\\n";
+            });
+        }
+        while (changed);
+
         const char* c_source = source.c_str();
         const unsigned int shader = glCreateShader(type);
 
@@ -144,7 +172,7 @@ private:
         if (success)
             strncpy_s(log, "  (no error)", 12);
 
-        std::cout << "shader compile log for '" << path << "':" << std::endl << log << std::endl;
+        cout << "shader compile log for '" << path << "':" << endl << log << endl;
 
         return success ? shader : 0;
     }
