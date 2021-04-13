@@ -1,6 +1,7 @@
 #pragma once
 
 #define _USE_MATH_DEFINES
+#define GLM_SWIZZLE
 #define GLEW_STATIC
 
 #define VERSION_MAJ 4
@@ -45,23 +46,17 @@ inline float randf(const float max) noexcept
     return randf() * max;
 }
 
-inline glm::vec3 from_rgb(unsigned int rgb) noexcept
-{
-    rgb &= 0x00ffffff;
-
-    return glm::vec3(
-        ((rgb & 0x00ff0000) >> 16) / 255.0,
-        ((rgb & 0x0000ff00) >> 8) / 255.0,
-        (rgb & 0x000000ff) / 255.0
-    );
-}
-
 inline glm::vec4 from_argb(const unsigned int argb)
 {
     return glm::vec4(
-        ((argb & 0xff000000) >> 24) / 255.0,
         ((argb & 0x00ff0000) >> 16) / 255.0,
         ((argb & 0x0000ff00) >> 8) / 255.0,
-        (argb & 0x000000ff) / 255.0
+        (argb & 0x000000ff) / 255.0,
+        ((argb & 0xff000000) >> 24) / 255.0
     );
+}
+
+inline glm::vec3 from_rgb(unsigned int rgb) noexcept
+{
+    return from_argb(rgb & 0x00ffffff).xyz();
 }
