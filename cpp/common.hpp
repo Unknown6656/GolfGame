@@ -62,11 +62,32 @@ inline glm::vec3 from_rgb(unsigned int rgb) noexcept
     return from_argb(rgb & 0x00ffffff).xyz();
 }
 
+inline void ltrim(std::string& s)
+{
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch)
+    {
+        return !std::isspace(ch);
+    }));
+}
+
+inline void rtrim(std::string& s)
+{
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch)
+    {
+        return !std::isspace(ch);
+    }).base(), s.end());
+}
+
+inline void trim(std::string& s)
+{
+    ltrim(s);
+    rtrim(s);
+}
 
 namespace std
 {
     template<class BidirIt, class Traits, class CharT, class UnaryFunction>
-    std::basic_string<CharT> regex_replace(BidirIt first, BidirIt last, const std::basic_regex<CharT, Traits>& re, UnaryFunction f)
+    std::basic_string<CharT> regex_replace_f(BidirIt first, BidirIt last, const std::basic_regex<CharT, Traits>& re, UnaryFunction f)
     {
         std::basic_string<CharT> s;
         typename std::match_results<BidirIt>::difference_type positionOfLastMatch = 0;
@@ -100,8 +121,8 @@ namespace std
     }
 
     template<class Traits, class CharT, class UnaryFunction>
-    std::string regex_replace(const std::string& s, const std::basic_regex<CharT, Traits>& re, UnaryFunction f)
+    std::string regex_replace_f(const std::string& s, const std::basic_regex<CharT, Traits>& re, UnaryFunction f)
     {
-        return regex_replace(s.cbegin(), s.cend(), re, f);
+        return regex_replace_f(s.cbegin(), s.cend(), re, f);
     }
 }
