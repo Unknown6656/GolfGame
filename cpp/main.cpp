@@ -2,14 +2,17 @@
 
 #include "main.hpp"
 
+
+#define GOLF_SEED 420 // TODO
+
 Shader* shader = nullptr;
 unsigned int VBO, VAO, EBO;
 
 bool ortho = false;
-float pov = 30.0f;
-float rotation_angle = 20.f;
+float pov = 90.0f;
+float rotation_angle = 10.f;
 glm::vec3 look_at = glm::vec3(0.f, 0.f, 0.f);
-glm::vec3 camera_position = glm::vec3(0.f, 2.f, 3.f);
+glm::vec3 camera_position = glm::vec3(0.f, 1.6f, 2.f);
 
 glm::vec4 color_outside_bounds = from_argb(0xFF387B43);
 glm::vec4 color_rough = from_argb(0xFF5C8C46);
@@ -147,7 +150,7 @@ void gl_error(int error_code, const char* message)
 
 void game_load()
 {
-    course = new GolfCourse(Par::Par4, 420);
+    course = new GolfCourse(Par::Par4, 2.5f, GOLF_SEED);
     course->rasterize(20, &rasterization_data);
 }
 
@@ -165,6 +168,9 @@ int window_load(GLFWwindow* const window)
         return -1;
 
     shader->use();
+
+    game_load();
+
     shader->set_vec4("u_color_outside_bounds", color_outside_bounds);
     shader->set_vec4("u_color_tee_box", color_tee_box);
     shader->set_vec4("u_color_rough", color_rough);
@@ -172,8 +178,7 @@ int window_load(GLFWwindow* const window)
     shader->set_vec4("u_color_bunker", color_bunker);
     shader->set_vec4("u_color_putting_green", color_putting_green);
     shader->set_vec4("u_color_water", color_water);
-
-    game_load();
+    shader->set_vec2("u_dimensions", rasterization_data.dimensions);
 
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -185,12 +190,16 @@ int window_load(GLFWwindow* const window)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, rasterization_data.indices.size() * sizeof(int), &rasterization_data.indices[0], GL_STATIC_DRAW);
 
     const int vertex_position = shader->get_attrib(nameof(vertex_position));
+    const int vertex_coords = shader->get_attrib(nameof(vertex_coords));
     const int vertex_color = shader->get_attrib(nameof(vertex_color));
 
     glVertexAttribPointer(vertex_position, sizeof(glm::vec3) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)0);
     glEnableVertexAttribArray(vertex_position);
 
-    glVertexAttribPointer(vertex_color, sizeof(glm::vec4) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)sizeof(glm::vec3));
+    glVertexAttribPointer(vertex_coords, sizeof(glm::vec2) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(vertex_coords);
+
+    glVertexAttribPointer(vertex_color, sizeof(glm::vec4) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)(5 * sizeof(float)));
     glEnableVertexAttribArray(vertex_color);
 
     return 0;
@@ -220,7 +229,7 @@ void window_render(GLFWwindow* const window)
             glm::radians(rotation_angle),
             glm::vec3(0.f, 1.f, 0.f)
         ),
-        glm::vec3(-.5f, 0.f, -.5f)
+        glm::vec3(-.5f * rasterization_data.dimensions.x, 0.f, -.5f * rasterization_data.dimensions.y)
     );
     const glm::mat4 view = glm::lookAt(camera_position, look_at, glm::vec3(0.f, 1.f, 0.f));
     const glm::mat4 proj = ortho ? glm::ortho<float>(0, width, 0, height, F_NEAR, F_FAR)

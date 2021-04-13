@@ -14,6 +14,8 @@ uniform mat4 u_model;
 uniform mat4 u_view;
 uniform mat4 u_projection;
 
+uniform vec2 u_dimensions;
+
 uniform vec4 u_color_outside_bounds;
 uniform vec4 u_color_tee_box;
 uniform vec4 u_color_rough;
@@ -23,16 +25,19 @@ uniform vec4 u_color_putting_green;
 uniform vec4 u_color_water;
 
 in vec3 vertex_position;
+in vec2 vertex_coords;
 in vec4 vertex_color;
 // TODO : more?
 
 out vec3 fwd_vertex_position;
+out vec2 fwd_vertex_coords;
 out vec4 fwd_vertex_color;
 
 
 void main()
 {
     fwd_vertex_position = vertex_position;
+    fwd_vertex_coords = vertex_coords;
     fwd_vertex_color = vertex_color;
 
     gl_Position = u_projection * u_view * u_model * vec4(vertex_position, 1.0);
