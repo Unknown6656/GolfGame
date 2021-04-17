@@ -11,12 +11,17 @@ enum class Par
     Par5 = 2
 };
 
+enum class VertexType
+{
+    Course = 0,
+    Parabola = 1,
+};
+
 struct VertexData
 {
     glm::vec3 position;
     glm::vec2 coords;
-    glm::vec4 color;
-    // TODO : more?
+    VertexType type;
 };
 
 struct SizedVec2
@@ -135,7 +140,7 @@ struct GolfCourse
 
             data->vertices[i].position = glm::vec3(x, elevation, y);
             data->vertices[i].coords = glm::vec2(x / ratio, y);
-            data->vertices[i].color = glm::vec4(0, 0, 0, 1); // TODO
+            data->vertices[i].type = VertexType::Course;
 
             if (ix < size_x && iy < size_y)
             {
@@ -197,7 +202,7 @@ struct GolfCourse
 
             data->vertices[outer_index_1].position = glm::vec3(outer_pos.x, 0, outer_pos.y);
             data->vertices[outer_index_1].coords = glm::vec2(outer_pos.x / ratio, outer_pos.y);
-            data->vertices[outer_index_1].color = glm::vec4(0, 0, 0, 1); // TODO
+            data->vertices[outer_index_1].type = VertexType::Course;
 
             const int base_index = 6 * size_x * size_y + 6 * i;
 

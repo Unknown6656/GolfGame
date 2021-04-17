@@ -6,15 +6,18 @@
 Shader* shader_main = nullptr;
 Shader* shader_post = nullptr;
 unsigned int FBO, RBO, TEX; // framebuffer, renderbuffer, and texturebuffer
-unsigned int VBO_golf, VAO_golf, EBO_golf; // actual geometry
+unsigned int VBO_golf, VAO_golf, EBO_golf; // golf course geometry
 unsigned int VBO_quad, VAO_quad; // post-processing quad
 int seed = 420;
 
 bool ortho = false;
+bool effects = false;
 float pov = 90.0f;
 float rotation_angle = 10.f;
 glm::vec3 look_at = glm::vec3(0.f, 0.f, 0.f);
+glm::vec3 light_position = glm::vec3(0.f, 3.f, -2.f);
 glm::vec3 camera_position = glm::vec3(0.f, 1.6f, 2.f);
+glm::mat4 parabola_transform = glm::mat4(1.f);
 
 glm::vec4 color_outside_bounds = from_argb(0xFF387B43);
 glm::vec4 color_rough = from_argb(0xFF5C8C46);
@@ -152,10 +155,8 @@ void gl_error(int error_code, const char* message)
     std::cout << "[GLFW Error] " << error_code << " | " << message << std::endl;
 }
 
-void game_load()
+void update_parabola(const glm::vec2 start, const float horizontal_angle, const float angle_of_attack, const float distance)
 {
-    course = new GolfCourse(Par::Par4, 2.5f, seed);
-    course->rasterize(20, &rasterization_data);
 }
 
 int window_load(GLFWwindow* const window)
@@ -168,10 +169,24 @@ int window_load(GLFWwindow* const window)
 
     if (!shader_main->success || !shader_post->success)
         return -1;
+    else
+        shader_main->use();
 
-    shader_main->use();
+    course = new GolfCourse(Par::Par4, 2.5f, seed);
+    course->rasterize(20, &rasterization_data);
 
-    game_load();
+    // add parabola vertices
+    const std::vector<VertexData> parabola_v =
+    {
+        // todo
+    };
+    const std::vector<int> parabola_i =
+    {
+        // todo
+    };
+
+    rasterization_data.vertices.insert(rasterization_data.vertices.end(), parabola_v.begin(), parabola_v.end());
+    rasterization_data.indices.insert(rasterization_data.indices.end(), parabola_i.begin(), parabola_i.end());
 
     shader_main->set_vec4("u_colors.outside_bounds", color_outside_bounds);
     shader_main->set_vec4("u_colors.tee_box", color_tee_box);
@@ -199,20 +214,25 @@ int window_load(GLFWwindow* const window)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_golf);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, rasterization_data.indices.size() * sizeof(int), &rasterization_data.indices[0], GL_STATIC_DRAW);
 
+    shader_main->set_attrib("vertex_position", 3, GL_FLOAT, &VertexData::position);
+    shader_main->set_attrib("vertex_coords", 2, GL_FLOAT, &VertexData::coords);
+    shader_main->set_attrib("vertex_type", 1, GL_INT, &VertexData::type);
+
     const int vertex_position = shader_main->get_attrib(nameof(vertex_position));
     const int vertex_coords = shader_main->get_attrib(nameof(vertex_coords));
-    const int vertex_color = shader_main->get_attrib(nameof(vertex_color));
+    const int vertex_type = shader_main->get_attrib(nameof(vertex_type));
 
-    glVertexAttribPointer(vertex_position, sizeof(glm::vec3) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)0);
+    glVertexAttribPointer(vertex_position, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)0);
     glEnableVertexAttribArray(vertex_position);
-    glVertexAttribPointer(vertex_coords, sizeof(glm::vec2) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)sizeof(glm::vec3));
+    glVertexAttribPointer(vertex_coords, 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)3);
     glEnableVertexAttribArray(vertex_coords);
-    glVertexAttribPointer(vertex_color, sizeof(glm::vec4) / sizeof(float), GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)(sizeof(glm::vec3) + sizeof(glm::vec2)));
-    glEnableVertexAttribArray(vertex_color);
+    //glVertexAttribPointer(vertex_type, 1, GL_INT, GL_FALSE, sizeof(VertexData), (void*)5);
+    //glEnableVertexAttribArray(vertex_type);
 
 
     shader_post->use();
     shader_post->set_int("u_screen_texture", 0);
+    shader_post->set_float("u_pixelation_factor", PIXELATION_FACTOR);
 
     const int screen_position = shader_post->get_attrib(nameof(screen_position));
     const int screen_coords = shader_post->get_attrib(nameof(screen_coords));
@@ -301,7 +321,7 @@ void window_render(GLFWwindow* const window)
 
     glfwGetWindowSize(window, &width, &height);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, effects ? FBO : 0);
     glEnable(GL_DEPTH_TEST);
     glClearColor(.2f, .3f, .3f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -321,22 +341,31 @@ void window_render(GLFWwindow* const window)
     shader_main->use();
     shader_main->set_float("u_time", time);
     shader_main->set_mat4("u_model", model);
+    shader_main->set_mat4("u_parabola", parabola_transform);
     shader_main->set_mat4("u_view", view);
     shader_main->set_mat4("u_projection", proj);
+    shader_main->set_vec3("u_camera_position", camera_position);
+    shader_main->set_vec3("u_light_position", light_position);
 
     glBindVertexArray(VAO_golf);
     glDrawElements(GL_TRIANGLES, rasterization_data.indices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glDisable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT);
+    if (effects)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDisable(GL_DEPTH_TEST);
+        glClear(GL_COLOR_BUFFER_BIT);
 
-    shader_post->use();
+        shader_post->use();
+        shader_post->set_float("u_time", time);
+        shader_post->set_int("u_width", width);
+        shader_post->set_int("u_height", height);
 
-    glBindVertexArray(VAO_quad);
-    glBindTexture(GL_TEXTURE_2D, TEX);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(VAO_quad);
+        glBindTexture(GL_TEXTURE_2D, TEX);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
 }
 
 void window_process_input(GLFWwindow* const window)
@@ -367,6 +396,10 @@ void window_process_input(GLFWwindow* const window)
         ortho = false;
     if (pressed(GLFW_KEY_5))
         ortho = true;
+    if (pressed(GLFW_KEY_6))
+        effects = false;
+    if (pressed(GLFW_KEY_7))
+        effects = true;
     if (pressed(GLFW_KEY_R))
     {
         Sleep(100);
