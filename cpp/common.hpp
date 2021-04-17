@@ -10,6 +10,8 @@
 #define F_NEAR .01f
 #define F_FAR 1000.f
 
+#define PIXELATION_FACTOR 8.f
+
 
 #include <iostream>
 #include <sstream>
