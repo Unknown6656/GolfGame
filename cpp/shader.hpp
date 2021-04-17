@@ -70,6 +70,16 @@ public:
         return glGetAttribLocation(program_handle, name.c_str());
     }
 
+    template <typename WholeVertex, typename Element>
+    void set_attrib(const std::string& name, const int arity, const GLenum type, Element WholeVertex::* const member_ptr) const noexcept
+    {
+        const int attrib = get_attrib(name);
+        const void* offset = &(((WholeVertex*)nullptr)->*member_ptr);
+
+        glVertexAttribPointer(attrib, arity, type, GL_FALSE, sizeof(WholeVertex), offset);
+        glEnableVertexAttribArray(attrib);
+    }
+
     inline int get_uniform(const std::string& name) const noexcept
     {
         return glGetUniformLocation(program_handle, name.c_str());
