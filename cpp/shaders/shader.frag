@@ -23,9 +23,7 @@ vec4 main_course()
     const bool is_outside_field = opos.x + EPS < 0 || opos.x - EPS > u_dimensions.x || opos.y + EPS < 0 || opos.y - EPS > u_dimensions.y;
     vec4 color;
 
-    if (is_outside_field)
-        color = u_colors.outside_bounds;
-    else if (length(pos.xz - u_golf_course.end_position) < u_golf_course.end_size)
+    if (length(pos.xz - u_golf_course.end_position) < u_golf_course.end_size)
         color = u_colors.putting_green;
     else if (length(pos.xz - u_golf_course.start_position) < u_golf_course.start_size)
         color = u_colors.tee_box;
@@ -47,10 +45,15 @@ vec4 main_course()
                 distance_line_point(u_golf_course.mid2_position, u_golf_course.end_position, pos.xz)
             );
 
-        color = dist_to_fairway < max(u_golf_course.start_size, u_golf_course.end_size) + .1 ? u_colors.fairway : u_colors.rough;
+        if (dist_to_fairway < max(u_golf_course.start_size, u_golf_course.end_size) + .1)
+            color = u_colors.fairway;
+        else if (is_outside_field)
+            color = u_colors.outside_bounds;
+        else
+            color = u_colors.rough;
     }
 
-    // shading
+    // diffuse shading
     color *= max(dot(vec3(0, 1, 0), normalize(u_light_position - pos_model)), 0);
 
     return color;
@@ -58,21 +61,32 @@ vec4 main_course()
 
 vec4 main_parabola()
 {
-    bool inside = false;
+    // check if   1-4(x-.5)^2 == y
+    const float x = coords.x;
+    float y = 2 * (x - .5);
 
+    y *= y;
+    y = 1 - y - coords.y * (1 + PARABOLA_THICKNESS);
 
-
-    inside = length(coords) > .5; // TODO
-    inside = true;
-
-
-    return inside ? vec4(1., 0., 0., 1.) : vec4(0.);
+    return abs(y) <= PARABOLA_THICKNESS ? lerp(x, vec4(.7, 0, 0, .3), vec4(1, 0, 0, .7)) : vec4(0.);
 }
 
 void main()
 {
     if (type == TYPE_COURSE)
-        gl_FragColor = main_course();
+    {
+        const vec2 para_start = (u_parabola * vec4(0, 0, 0, 1)).xz;
+        const vec2 para_end = (u_parabola * vec4(1, 0, 0, 1)).xz;
+
+        if (distance(pos_model.xz, para_start) < PARABOLA_THICKNESS)
+            gl_FragColor = vec4(.5, 0, 0, 1);
+        else if (distance(pos_model.xz, para_end) < PARABOLA_THICKNESS)
+            gl_FragColor = vec4(1, 0, 0, 1);
+        else
+            gl_FragColor = main_course();
+    }
     else if (type == TYPE_PARABOLA)
         gl_FragColor = main_parabola();
+    else
+        gl_FragColor = vec4(1, 0, 1, 1);
 }

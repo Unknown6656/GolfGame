@@ -11,8 +11,14 @@ precision highp float;
 #define TYPE_COURSE 0
 #define TYPE_PARABOLA 1
 
+#define PARABOLA_THICKNESS .01
+
 #ifndef saturate
     #define saturate(v) clamp(v, 0., 1.)
+#endif
+
+#ifndef lerp
+    #define lerp(f, x, y) ((1 - (f)) * (x) + (f) * (y))
 #endif
 
 uniform float u_time;
