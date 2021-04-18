@@ -71,12 +71,35 @@ public:
     }
 
     template <typename WholeVertex, typename Element>
-    void set_attrib(const std::string& name, const int arity, const GLenum type, Element WholeVertex::* const member_ptr) const noexcept
+    void set_attrib_f(const std::string& name, Element WholeVertex::* const member_ptr) const noexcept
     {
         const int attrib = get_attrib(name);
         const void* offset = &(((WholeVertex*)nullptr)->*member_ptr);
 
-        glVertexAttribPointer(attrib, arity, type, GL_FALSE, sizeof(WholeVertex), offset);
+        glVertexAttribPointer(
+            attrib,
+            sizeof(Element) / sizeof(float),
+            GL_FLOAT,
+            GL_FALSE,
+            sizeof(WholeVertex),
+            offset
+        );
+        glEnableVertexAttribArray(attrib);
+    }
+
+    template <typename WholeVertex, typename Element>
+    void set_attrib_i(const std::string& name, Element WholeVertex::* const member_ptr) const noexcept
+    {
+        const int attrib = get_attrib(name);
+        const void* offset = &(((WholeVertex*)nullptr)->*member_ptr);
+
+        glVertexAttribIPointer(
+            attrib,
+            sizeof(Element) / sizeof(int),
+            GL_INT,
+            sizeof(WholeVertex),
+            offset
+        );
         glEnableVertexAttribArray(attrib);
     }
 
