@@ -62,9 +62,22 @@ struct RasterizationData
     std::vector<int> indices;
     glm::vec2 dimensions;
     Par par;
-    SizedVec2 start;
+    SizedVec2 tee;
+    glm::vec2 start;
     glm::vec2 mid[2];
     SizedVec2 end;
+};
+
+enum class CurrentBallPosition
+{
+    UNDEFINED,
+    TeeBox,
+    Rough,
+    Fairway,
+    OutsideCourse,
+    PuttingGreen,
+    Bunker,
+    Water,
 };
 
 struct GolfCourse
@@ -73,6 +86,7 @@ struct GolfCourse
     Par _par;
     float _length;
     SizedVec2 _course_start_position;
+    glm::vec2 _fairway_start_position;
     std::vector<glm::vec2> _course_midway_points;
     SizedVec2 _course_putting_green;
 
@@ -92,7 +106,7 @@ struct GolfCourse
             randf(margin) + _course_start_position.size,
             randf(1.f - 2.f * _course_start_position.size) + _course_start_position.size
         );
-        _course_putting_green.size = randf(.15f) + .1f;
+        _course_putting_green.size = randf(.1f) + .07f;
         _course_putting_green.position = glm::vec2(
             randf(margin) + (length - margin - _course_putting_green.size),
             randf(1.f - 2.f * _course_putting_green.size) + _course_putting_green.size
@@ -134,11 +148,15 @@ struct GolfCourse
         }
         else
             _course_midway_points = std::vector<glm::vec2>();
+
+        const float fsp = (_course_start_position.size + .2) * 2;
+
+        _fairway_start_position = (1 - fsp) * _course_start_position.position + fsp * (par == Par::Par3 ? _course_putting_green.position : _course_midway_points[0]);
     }
 
     void rasterize(const int subdivisions, RasterizationData* const data) const
     {
-#define RADIUS 1.5f
+#define RADIUS 2.5f
 
         const int size_y = std::max(1, subdivisions);
         const int size_x = size_y * _length;
@@ -151,7 +169,8 @@ struct GolfCourse
         data->vertices = std::vector<VertexData>(inner_count + edge_count);
         data->indices = std::vector<int>(6 * size_x * size_y + 6 * edge_count);
         data->par = _par;
-        data->start = _course_start_position;
+        data->tee = _course_start_position;
+        data->start = _fairway_start_position;
         data->end = _course_putting_green;
         data->mid[0] = _course_midway_points.size() ? _course_midway_points[0] : glm::vec2();
         data->mid[1] = _course_midway_points.size() > 1 ? _course_midway_points[1] : glm::vec2();
@@ -244,5 +263,48 @@ struct GolfCourse
             vertex.coords = vertex.position.xz / glm::vec2(ratio, 1.f);
 
 #undef RADIUS
+    }
+
+    inline float get_fairway_size(const float x_position) const noexcept
+    {
+        const float factor = (x_position - _course_start_position.position.x) / (_course_putting_green.position.x - _course_start_position.position.x);
+
+        return (1 - factor) * _course_start_position.size + factor * _course_putting_green.size + .15f;
+    }
+
+    CurrentBallPosition get_ball_position(const glm::vec2 ball_position) const noexcept
+    {
+        if (glm::distance(ball_position, _course_start_position.position) <= _course_start_position.size)
+            return CurrentBallPosition::TeeBox;
+        else if (glm::distance(ball_position, _course_putting_green.position) <= _course_putting_green.size)
+            return CurrentBallPosition::PuttingGreen;
+
+        const float fairway_size = get_fairway_size(ball_position.x);
+        float dist_to_fairway;
+
+        if (_par == Par::Par3)
+            dist_to_fairway = distance_line_point(_course_start_position.position, _course_putting_green.position, ball_position);
+        else if (_par == Par::Par4)
+            dist_to_fairway = std::min(
+                distance_line_point(_course_start_position.position, _course_midway_points[0], ball_position),
+                distance_line_point(_course_midway_points[0], _course_putting_green.position, ball_position)
+            );
+        else if (_par == Par::Par5)
+            dist_to_fairway = std::min(std::min(
+                distance_line_point(_course_start_position.position, _course_midway_points[0], ball_position),
+                distance_line_point(_course_midway_points[0], _course_midway_points[1], ball_position)),
+                distance_line_point(_course_midway_points[1], _course_putting_green.position, ball_position)
+            );
+        else
+            return CurrentBallPosition::UNDEFINED;
+
+        // TODO : water + bunker
+
+        if (dist_to_fairway <= fairway_size)
+            return CurrentBallPosition::Fairway;
+        else if (dist_to_fairway <= fairway_size + .2) // TODO !!!!
+            return CurrentBallPosition::Rough;
+        else
+            return CurrentBallPosition::OutsideCourse;
     }
 };
