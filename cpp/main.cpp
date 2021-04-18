@@ -5,8 +5,10 @@
 
 Shader* shader_main = nullptr;
 Shader* shader_post = nullptr;
+Shader* shader_font = nullptr;
 unsigned int FBO, RBO, TEX; // framebuffer, renderbuffer, and texturebuffer
 unsigned int VBO_golf, VAO_golf, EBO_golf; // golf course geometry
+unsigned int VBO_font, VAO_font; // font character quad
 unsigned int VBO_quad, VAO_quad; // post-processing quad
 int seed = 420;
 
@@ -30,7 +32,7 @@ glm::vec4 color_sun = from_argb(0xFFF7DB09);
 RasterizationData rasterization_data;
 GolfCourse* course = nullptr;
 
-Font* main_font = nullptr;
+Font* font_main = nullptr;
 
 
 int __cdecl main(const int argc, const char** const argv)
@@ -65,8 +67,6 @@ int __cdecl main(const int argc, const char** const argv)
     else if (window)
     {
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_MULTISAMPLE);
         glad_glDebugMessageCallback(gl_debug, nullptr);
         glfwSetErrorCallback(gl_error);
 
@@ -75,8 +75,13 @@ int __cdecl main(const int argc, const char** const argv)
                   << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl
                   << glGetString(GL_VENDOR) << std::endl << std::endl;
 
-        main_font = new Font("fonts/smallfont.ttf");
-        exit_code = !main_font->success;
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_MULTISAMPLE);
+        // glShadeModel(GL_SMOOTH);
+        // glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+
+        font_main = new Font("fonts/smallfont.ttf");
+        exit_code = !font_main->success;
     }
 
     if (!exit_code)
@@ -116,8 +121,9 @@ int __cdecl main(const int argc, const char** const argv)
 
     window_unload(window);
     glfwTerminate();
+    font_main->CleanUp();
 
-    delete main_font;
+    delete font_main;
 
     return exit_code;
 }
@@ -174,10 +180,15 @@ int window_load(GLFWwindow* const window)
     glViewport(0, 0, INIT_WIDTH, INIT_HEIGHT);
     glfwSetFramebufferSizeCallback(window, window_resize);
 
+    std::cout << "--------------------------------------------------------------------" << std::endl;
+
     shader_main = new Shader("shaders/shader.vert", /*"shaders/shader.geom"*/ "", "shaders/shader.frag");
     shader_post = new Shader("shaders/post-process.vert", "", "shaders/post-process.frag");
+    shader_font = new Shader("shaders/font.vert", "", "shaders/font.frag");
 
-    if (!shader_main->success || !shader_post->success)
+    std::cout << "--------------------------------------------------------------------" << std::endl;
+
+    if (!shader_main->success || !shader_post->success || !shader_font->success)
         return -1;
     else
         shader_main->use();
@@ -201,6 +212,9 @@ int window_load(GLFWwindow* const window)
 
     rasterization_data.vertices.insert(rasterization_data.vertices.end(), parabola_v.begin(), parabola_v.end());
     rasterization_data.indices.insert(rasterization_data.indices.end(), parabola_i.begin(), parabola_i.end());
+
+
+    /////////////////////////////////// SET UP MAIN SHADER ///////////////////////////////////
 
     shader_main->set_vec4("u_colors.outside_bounds", color_outside_bounds);
     shader_main->set_vec4("u_colors.tee_box", color_tee_box);
@@ -233,6 +247,24 @@ int window_load(GLFWwindow* const window)
     shader_main->set_attrib_f("vertex_coords", &VertexData::coords);
     shader_main->set_attrib_i("vertex_type", &VertexData::type);
 
+
+    /////////////////////////////////// SET UP FONT SHADER ///////////////////////////////////
+
+    shader_font->use();
+
+    glGenVertexArrays(1, &VAO_font);
+    glGenBuffers(1, &VBO_font);
+    glBindVertexArray(VAO_font);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_font);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 6, nullptr, GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray(shader_font->get_attrib("glyph_poscoord"));
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(float) * 4, nullptr);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+
+    /////////////////////////////////// SET UP POST-PROCESSING SHADER ///////////////////////////////////
+
     shader_post->use();
     shader_post->set_int("u_screen_texture", 0);
     shader_post->set_float("u_pixelation_factor", PIXELATION_FACTOR);
@@ -261,6 +293,8 @@ int window_load(GLFWwindow* const window)
     glEnableVertexAttribArray(screen_coords);
     glVertexAttribPointer(screen_coords, sizeof(glm::vec2) / sizeof(float), GL_FLOAT, GL_FALSE, 2 * sizeof(glm::vec2), (void*)sizeof(glm::vec2));
 
+
+    /////////////////////////////////// SET UP POST-PROCESSING FRAME BUFFERS ETC. ///////////////////////////////////
 
     glGenFramebuffers(1, &FBO);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
@@ -313,10 +347,17 @@ void window_unload(GLFWwindow* const)
     delete course;
     delete shader_main;
     delete shader_post;
+    delete shader_font;
 
     course = nullptr;
     shader_main = nullptr;
     shader_post = nullptr;
+    shader_font = nullptr;
+}
+
+inline void render_text(const glm::mat4& camera, const std::string& text, const float x, const float y, const float size, const glm::vec4& color)
+{
+    font_main->RenderText(shader_font, text, glm::vec2(x, y), size, color, VAO_font, VBO_font);
 }
 
 void window_render(GLFWwindow* const window)
@@ -325,6 +366,8 @@ void window_render(GLFWwindow* const window)
     int width, height;
 
     glfwGetWindowSize(window, &width, &height);
+
+    const glm::mat4 ortho = glm::ortho(0, width, 0, height);
 
     glBindFramebuffer(GL_FRAMEBUFFER, effects ? FBO : 0);
     glEnable(GL_DEPTH_TEST);
@@ -356,6 +399,8 @@ void window_render(GLFWwindow* const window)
     glBindVertexArray(VAO_golf);
     glDrawElements(GL_TRIANGLES, rasterization_data.indices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
+
+    render_text(ortho, format("time: %f", time), 10, 10, 1, from_argb(0xffff0000));
 
     if (effects)
     {
