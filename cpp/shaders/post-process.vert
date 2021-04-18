@@ -1,6 +1,4 @@
-#version 460 core
-
-precision highp float;
+#include "common.glsl"
 
 
 in vec2 screen_position;

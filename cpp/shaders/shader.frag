@@ -1,4 +1,4 @@
-#include "common.glsl"
+#include "shader.glsl"
 
 
 in vec3 pos;
