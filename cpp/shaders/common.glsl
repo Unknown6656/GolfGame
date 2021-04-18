@@ -13,6 +13,12 @@ precision highp float;
 
 #define PARABOLA_THICKNESS .01
 
+#define HATCHET_X 20
+#define HATCHET_Y 12
+#define HATCHET_OFFS 3
+#define HATCHET_INTENSITY .03
+
+
 #ifndef saturate
     #define saturate(v) clamp(v, 0., 1.)
 #endif
@@ -20,6 +26,7 @@ precision highp float;
 #ifndef lerp
     #define lerp(f, x, y) ((1 - (f)) * (x) + (f) * (y))
 #endif
+
 
 uniform float u_time;
 uniform mat4 u_model;
@@ -33,8 +40,9 @@ uniform vec2 u_dimensions;
 
 uniform struct {
     int par;
-    vec2 start_position;
-    float start_size;
+    vec2 tee_position;
+    vec2 fairway_start_position;
+    float tee_size;
     vec2 mid1_position;
     vec2 mid2_position;
     vec2 end_position;
@@ -49,6 +57,7 @@ uniform struct {
     vec4 bunker;
     vec4 putting_green;
     vec4 water;
+    vec4 sun;
 } u_colors;
 
 
