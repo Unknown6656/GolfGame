@@ -8,6 +8,8 @@
 
 
 #include "game.hpp"
+#include "font.hpp"
+#include "shader.hpp"
 
 
 int __cdecl main(const int, const char** const);
@@ -20,3 +22,4 @@ void window_unload(GLFWwindow* const);
 void window_render(GLFWwindow* const);
 void window_resize(GLFWwindow* const, int, int);
 void window_process_input(GLFWwindow* const);
+

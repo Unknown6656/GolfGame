@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "shader.hpp"
+#include "common.hpp"
 
 
 enum class Par

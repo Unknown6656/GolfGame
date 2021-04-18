@@ -30,6 +30,8 @@ glm::vec4 color_sun = from_argb(0xFFF7DB09);
 RasterizationData rasterization_data;
 GolfCourse* course = nullptr;
 
+Font* main_font = nullptr;
+
 
 int __cdecl main(const int argc, const char** const argv)
 {
@@ -73,8 +75,12 @@ int __cdecl main(const int argc, const char** const argv)
                   << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl
                   << glGetString(GL_VENDOR) << std::endl << std::endl;
 
-        exit_code = window_load(window);
+        main_font = new Font("fonts/smallfont.ttf");
+        exit_code = !main_font->success;
     }
+
+    if (!exit_code)
+        exit_code = window_load(window);
 
     if (!exit_code)
     {
@@ -110,6 +116,8 @@ int __cdecl main(const int argc, const char** const argv)
 
     window_unload(window);
     glfwTerminate();
+
+    delete main_font;
 
     return exit_code;
 }
