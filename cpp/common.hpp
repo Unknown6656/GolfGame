@@ -38,6 +38,8 @@
 
 #define nameof(name) #name
 
+#define OSTREAM_OPERATOR(x) friend inline std::ostream& operator<<(std::ostream& os, const x& value) { os << value.to_string(); return os; }
+
 
 inline float randf() noexcept
 {
@@ -84,6 +86,17 @@ inline void trim(std::string& s)
 {
     ltrim(s);
     rtrim(s);
+}
+
+template <typename ...Args>
+inline std::string format(const std::string& format, Args && ...args)
+{
+    const int size = std::snprintf(nullptr, 0, format.c_str(), std::forward<Args>(args)...);
+    std::string output(size + 1, '\0');
+
+    sprintf_s(&output[0], size + 1, format.c_str(), std::forward<Args>(args)...);
+
+    return output;
 }
 
 namespace std

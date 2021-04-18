@@ -3,7 +3,6 @@
 #include "shader.hpp"
 
 
-
 enum class Par
 {
     Par3 = 0,
@@ -22,6 +21,33 @@ struct VertexData
     glm::vec3 position;
     glm::vec2 coords;
     VertexType type;
+
+    VertexData(const glm::vec3 pos, const glm::vec2 coord, const VertexType type) noexcept
+        : position(pos)
+        , coords(coord)
+        , type(type)
+    {
+    }
+
+    VertexData() noexcept
+        : VertexData(glm::vec3(), glm::vec2(), VertexType::Course)
+    {
+    }
+
+    std::string to_string() const noexcept
+    {
+        return format(
+            "[%10f,%10f,%10f|%10f,%10f|%i]",
+            position.x,
+            position.y,
+            position.z,
+            coords.x,
+            coords.y,
+            (int)type
+        );
+    }
+
+    OSTREAM_OPERATOR(VertexData);
 };
 
 struct SizedVec2
@@ -139,7 +165,6 @@ struct GolfCourse
             const float elevation = 0; // .1 * (sin(x * 4) + sin(z * 4));
 
             data->vertices[i].position = glm::vec3(x, elevation, y);
-            data->vertices[i].coords = glm::vec2(x / ratio, y);
             data->vertices[i].type = VertexType::Course;
 
             if (ix < size_x && iy < size_y)
@@ -201,7 +226,6 @@ struct GolfCourse
             outer_pos += center;
 
             data->vertices[outer_index_1].position = glm::vec3(outer_pos.x, 0, outer_pos.y);
-            data->vertices[outer_index_1].coords = glm::vec2(outer_pos.x / ratio, outer_pos.y);
             data->vertices[outer_index_1].type = VertexType::Course;
 
             const int base_index = 6 * size_x * size_y + 6 * i;
@@ -215,6 +239,9 @@ struct GolfCourse
             data->indices[base_index + 4] = outer_index_2;
             data->indices[base_index + 5] = inner_index_2;
         }
+
+        for (VertexData& vertex : data->vertices)
+            vertex.coords = vertex.position.xz / glm::vec2(ratio, 1.f);
 
 #undef RADIUS
     }
