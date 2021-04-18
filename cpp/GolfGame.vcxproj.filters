@@ -64,6 +64,9 @@
     <None Include="shaders\shader.frag" />
     <None Include="shaders\shader.geom" />
     <None Include="shaders\shader.vert" />
+    <None Include="shaders\font.vert" />
+    <None Include="shaders\font.frag" />
+    <None Include="shaders\shader.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="fonts\smallfont.ttf" />

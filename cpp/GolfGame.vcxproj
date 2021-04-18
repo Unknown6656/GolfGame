@@ -122,6 +122,12 @@
     <None Include="shaders\common.glsl">
       <DeploymentContent>true</DeploymentContent>
     </None>
+    <None Include="shaders\font.frag">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="shaders\font.vert">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
     <None Include="shaders\post-process.frag">
       <DeploymentContent>true</DeploymentContent>
     </None>
@@ -132,6 +138,9 @@
       <DeploymentContent>true</DeploymentContent>
     </None>
     <None Include="shaders\shader.geom">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="shaders\shader.glsl">
       <DeploymentContent>true</DeploymentContent>
     </None>
     <None Include="shaders\shader.vert">
