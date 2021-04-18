@@ -11,4 +11,4 @@ void main()
 {
     tex_coords = screen_coords;
     gl_Position = vec4(screen_position, 0, 1);
-}  
+}
