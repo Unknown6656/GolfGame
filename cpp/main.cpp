@@ -18,13 +18,14 @@ glm::vec3 light_position = glm::vec3(0.f, 3.f, -2.f);
 glm::vec3 camera_position = glm::vec3(0.f, 1.6f, 2.f);
 glm::mat4 parabola_transform = glm::mat4(1.f);
 
-glm::vec4 color_outside_bounds = from_argb(0xFF387B43);
-glm::vec4 color_rough = from_argb(0xFF5C8C46);
-glm::vec4 color_fairway = from_argb(0xFF389A3B);
-glm::vec4 color_tee_box = from_argb(0xFFA8952A);
-glm::vec4 color_bunker = from_argb(0xFFE6C510);
-glm::vec4 color_putting_green = from_argb(0xFF36C12E);
+glm::vec4 color_outside_bounds = from_argb(0xFF043925);
+glm::vec4 color_rough = from_argb(0xFF025A34);
+glm::vec4 color_fairway = from_argb(0xFF227B43);
+glm::vec4 color_tee_box = from_argb(0xFF6BA453);
+glm::vec4 color_bunker = from_argb(0xFFDDC69A);
+glm::vec4 color_putting_green = from_argb(0xFF8EC375);
 glm::vec4 color_water = from_argb(0xFF36C9F7);
+glm::vec4 color_sun = from_argb(0xFFF7DB09);
 
 RasterizationData rasterization_data;
 GolfCourse* course = nullptr;
@@ -200,10 +201,12 @@ int window_load(GLFWwindow* const window)
     shader_main->set_vec4("u_colors.bunker", color_bunker);
     shader_main->set_vec4("u_colors.putting_green", color_putting_green);
     shader_main->set_vec4("u_colors.water", color_water);
+    shader_main->set_vec4("u_colors.sun", color_sun);
     shader_main->set_vec2("u_dimensions", rasterization_data.dimensions);
     shader_main->set_int("u_golf_course.par", (int)rasterization_data.par);
-    shader_main->set_vec2("u_golf_course.start_position", rasterization_data.start.position);
-    shader_main->set_float("u_golf_course.start_size", rasterization_data.start.size);
+    shader_main->set_float("u_golf_course.tee_size", rasterization_data.tee.size);
+    shader_main->set_vec2("u_golf_course.tee_position", rasterization_data.tee.position);
+    shader_main->set_vec2("u_golf_course.fairway_start_position", rasterization_data.start);
     shader_main->set_vec2("u_golf_course.mid1_position", rasterization_data.mid[0]);
     shader_main->set_vec2("u_golf_course.mid2_position", rasterization_data.mid[1]);
     shader_main->set_vec2("u_golf_course.end_position", rasterization_data.end.position);
@@ -369,29 +372,7 @@ void window_process_input(GLFWwindow* const window)
 
     if (pressed(GLFW_KEY_ESCAPE))
         glfwSetWindowShouldClose(window, true);
-    if (pressed(GLFW_KEY_1))
-    {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glLineWidth(1);
-        glPointSize(1);
-    }
-    if (pressed(GLFW_KEY_2))
-    {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glLineWidth(2.5f);
-        glPointSize(1);
-    }
-    if (pressed(GLFW_KEY_3))
-    {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-        glLineWidth(1);
-        glPointSize(3.5f);
-    }
-    if (pressed(GLFW_KEY_6))
-        effects = false;
-    if (pressed(GLFW_KEY_7))
-        effects = true;
-    if (pressed(GLFW_KEY_R))
+    else if (pressed(GLFW_KEY_R))
     {
         Sleep(100);
 
@@ -400,7 +381,44 @@ void window_process_input(GLFWwindow* const window)
         window_unload(window);
         window_load(window);
         glfwPollEvents();
+
+        return;
     }
+
+    if (pressed(GLFW_KEY_F1))
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glLineWidth(1);
+        glPointSize(1);
+    }
+    else if (pressed(GLFW_KEY_F2))
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glLineWidth(2.5f);
+        glPointSize(1);
+    }
+    else if (pressed(GLFW_KEY_F3))
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+        glLineWidth(1);
+        glPointSize(3.5f);
+    }
+    
+    if (pressed(GLFW_KEY_F4))
+        effects = false;
+    else if (pressed(GLFW_KEY_F5))
+        effects = true;
+
+    if (pressed(GLFW_KEY_A))
+        camera_position.x -= .01;
+    if (pressed(GLFW_KEY_D))
+        camera_position.x += .01;
+    if (pressed(GLFW_KEY_W))
+        camera_position.z -= .01;
+    if (pressed(GLFW_KEY_S))
+        camera_position.z += .01;
+
+    camera_position.xz = glm::clamp(camera_position.xz(), glm::vec2(-1.5f, .5f), glm::vec2(1.5f, 2.3f));
 
 #undef pressed
 }
