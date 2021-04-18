@@ -123,32 +123,32 @@ public:
         glUniform1f(get_uniform(name), value);
     }
 
-    void set_vec2(const std::string& name, const glm::vec2 value) const noexcept
+    void set_vec2(const std::string& name, const glm::vec2& value) const noexcept
     {
         glUniform2f(get_uniform(name), value.x, value.y);
     }
 
-    void set_vec3(const std::string& name, const glm::vec3 value) const noexcept
+    void set_vec3(const std::string& name, const glm::vec3& value) const noexcept
     {
         glUniform3f(get_uniform(name), value.x, value.y, value.z);
     }
 
-    void set_vec4(const std::string& name, const glm::vec4 value) const noexcept
+    void set_vec4(const std::string& name, const glm::vec4& value) const noexcept
     {
         glUniform4f(get_uniform(name), value.x, value.y, value.z, value.w);
     }
 
-    void set_mat2(const std::string& name, const glm::mat2 value) const noexcept
+    void set_mat2(const std::string& name, const glm::mat2& value) const noexcept
     {
         glUniformMatrix2fv(get_uniform(name), 1, false, (float*)&value);
     }
 
-    void set_mat3(const std::string& name, const glm::mat3 value) const noexcept
+    void set_mat3(const std::string& name, const glm::mat3& value) const noexcept
     {
         glUniformMatrix3fv(get_uniform(name), 1, false, (float*)&value);
     }
 
-    void set_mat4(const std::string& name, const glm::mat4 value) const noexcept
+    void set_mat4(const std::string& name, const glm::mat4& value) const noexcept
     {
         glUniformMatrix4fv(get_uniform(name), 1, false, (float*)&value);
     }
