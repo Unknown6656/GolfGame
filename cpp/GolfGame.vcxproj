@@ -23,6 +23,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -30,6 +31,7 @@
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -47,11 +49,19 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin</OutDir>
     <IntDir>$(ProjectName)/obj</IntDir>
+    <ReferencePath>$(SolutionDir)dependencies/lib;$(ReferencePath)</ReferencePath>
+    <CopyLocalProjectReference>true</CopyLocalProjectReference>
+    <CopyCppRuntimeToOutputDir>true</CopyCppRuntimeToOutputDir>
+    <CopyLocalDeploymentContent>true</CopyLocalDeploymentContent>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)bin</OutDir>
     <IntDir>$(ProjectName)/obj</IntDir>
+    <ReferencePath>$(SolutionDir)dependencies/lib;$(ReferencePath)</ReferencePath>
+    <CopyLocalProjectReference>true</CopyLocalProjectReference>
+    <CopyCppRuntimeToOutputDir>true</CopyCppRuntimeToOutputDir>
+    <CopyLocalDeploymentContent>true</CopyLocalDeploymentContent>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -61,13 +71,17 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)dependencies/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)dependencies/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;glew32.lib;glew32s.lib;glu32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glew32.lib;glew32s.lib;glu32.lib;glfw3.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /y /d "$(SolutionDir)dependencies\lib\*.dll" "$(TargetDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -79,6 +93,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)dependencies/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -86,8 +101,11 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)dependencies/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;glew32.lib;glew32s.lib;glu32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glew32.lib;glew32s.lib;glu32.lib;glfw3.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /y /d "$(SolutionDir)dependencies\lib\*.dll" "$(TargetDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="glad.c" />
@@ -95,10 +113,37 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.hpp" />
+    <ClInclude Include="font.hpp" />
     <ClInclude Include="game.hpp" />
     <ClInclude Include="main.hpp" />
     <ClInclude Include="shader.hpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\common.glsl">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="shaders\post-process.frag">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="shaders\post-process.vert">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="shaders\shader.frag">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="shaders\shader.geom">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="shaders\shader.vert">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="fonts\smallfont.ttf">
+      <DeploymentContent>true</DeploymentContent>
+    </Font>
+  </ItemGroup>
+  <!--
   <ItemGroup>
     <Content Include="shaders\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -110,14 +155,17 @@
   <ItemGroup>
     <CopyFileToFolders Include="shaders\*">
       <FileType>Document</FileType>
+      <DeploymentContent>true</DeploymentContent>
     </CopyFileToFolders>
     <CopyFileToFolders Include="fonts\*">
       <FileType>Document</FileType>
+      <DeploymentContent>true</DeploymentContent>
     </CopyFileToFolders>
     <CopyFileToFolders Include="..\dependencies\lib\freetype.dll">
       <FileType>Document</FileType>
     </CopyFileToFolders>
   </ItemGroup>
+-->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
