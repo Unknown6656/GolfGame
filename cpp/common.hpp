@@ -66,6 +66,19 @@ inline glm::vec3 from_rgb(unsigned int rgb) noexcept
     return from_argb(rgb & 0x00ffffff).xyz();
 }
 
+inline float distance_line_point(const glm::vec2 line_start, const glm::vec2 line_end, const glm::vec2 point) noexcept
+{
+    const float l = glm::distance(line_start, line_end);
+
+    if (l <= 0)
+        return glm::distance(point, line_start);
+
+    const float t = std::max(0.f, std::min(1.f, (glm::dot(point - line_start, line_end - line_start) / (l * l))));
+    const glm::vec2 proj = line_start + t * (line_end - line_start);
+
+    return glm::distance(point, proj);
+}
+
 inline void ltrim(std::string& s)
 {
     s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch)
@@ -89,7 +102,7 @@ inline void trim(std::string& s)
 }
 
 template <typename ...Args>
-inline std::string format(const std::string& format, Args && ...args)
+inline std::string format(const std::string& format, Args&& ...args)
 {
     const int size = std::snprintf(nullptr, 0, format.c_str(), std::forward<Args>(args)...);
     std::string output(size + 1, '\0');
