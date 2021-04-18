@@ -10,7 +10,6 @@ unsigned int VBO_golf, VAO_golf, EBO_golf; // golf course geometry
 unsigned int VBO_quad, VAO_quad; // post-processing quad
 int seed = 420;
 
-bool ortho = false;
 bool effects = false;
 float pov = 90.0f;
 float rotation_angle = 10.f;
@@ -43,6 +42,7 @@ int __cdecl main(const int argc, const char** const argv)
 #else
     glfwWindowHint(GLFW_DOUBLEBUFFER, GL_FALSE);
 #endif
+    glfwWindowHint(GLFW_SAMPLES, 2);
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
 #endif
@@ -63,6 +63,7 @@ int __cdecl main(const int argc, const char** const argv)
     {
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glEnable(GL_DEPTH_TEST);
+        glEnable(GL_MULTISAMPLE);
         glad_glDebugMessageCallback(gl_debug, nullptr);
         glfwSetErrorCallback(gl_error);
 
@@ -175,14 +176,18 @@ int window_load(GLFWwindow* const window)
     course = new GolfCourse(Par::Par4, 2.5f, seed);
     course->rasterize(20, &rasterization_data);
 
-    // add parabola vertices
+    const int parabola_offs = rasterization_data.vertices.size();
     const std::vector<VertexData> parabola_v =
     {
-        // todo
+        VertexData(glm::vec3(0, 0, 0), glm::vec2(0, 0), VertexType::Parabola),
+        VertexData(glm::vec3(0, 1, 0), glm::vec2(0, 1), VertexType::Parabola),
+        VertexData(glm::vec3(1, 1, 0), glm::vec2(1, 1), VertexType::Parabola),
+        VertexData(glm::vec3(1, 0, 0), glm::vec2(1, 0), VertexType::Parabola),
     };
     const std::vector<int> parabola_i =
     {
-        // todo
+        parabola_offs, parabola_offs + 1, parabola_offs + 2,
+        parabola_offs, parabola_offs + 2, parabola_offs + 3,
     };
 
     rasterization_data.vertices.insert(rasterization_data.vertices.end(), parabola_v.begin(), parabola_v.end());
@@ -196,14 +201,13 @@ int window_load(GLFWwindow* const window)
     shader_main->set_vec4("u_colors.putting_green", color_putting_green);
     shader_main->set_vec4("u_colors.water", color_water);
     shader_main->set_vec2("u_dimensions", rasterization_data.dimensions);
-    shader_main->set_int( "u_golf_course.par", (int)rasterization_data.par);
+    shader_main->set_int("u_golf_course.par", (int)rasterization_data.par);
     shader_main->set_vec2("u_golf_course.start_position", rasterization_data.start.position);
     shader_main->set_float("u_golf_course.start_size", rasterization_data.start.size);
     shader_main->set_vec2("u_golf_course.mid1_position", rasterization_data.mid[0]);
     shader_main->set_vec2("u_golf_course.mid2_position", rasterization_data.mid[1]);
     shader_main->set_vec2("u_golf_course.end_position", rasterization_data.end.position);
     shader_main->set_float("u_golf_course.end_size", rasterization_data.end.size);
-
 
     glGenVertexArrays(1, &VAO_golf);
     glGenBuffers(1, &VBO_golf);
@@ -214,21 +218,9 @@ int window_load(GLFWwindow* const window)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_golf);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, rasterization_data.indices.size() * sizeof(int), &rasterization_data.indices[0], GL_STATIC_DRAW);
 
-    shader_main->set_attrib("vertex_position", 3, GL_FLOAT, &VertexData::position);
-    shader_main->set_attrib("vertex_coords", 2, GL_FLOAT, &VertexData::coords);
-    shader_main->set_attrib("vertex_type", 1, GL_INT, &VertexData::type);
-
-    const int vertex_position = shader_main->get_attrib(nameof(vertex_position));
-    const int vertex_coords = shader_main->get_attrib(nameof(vertex_coords));
-    const int vertex_type = shader_main->get_attrib(nameof(vertex_type));
-
-    glVertexAttribPointer(vertex_position, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)0);
-    glEnableVertexAttribArray(vertex_position);
-    glVertexAttribPointer(vertex_coords, 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void*)3);
-    glEnableVertexAttribArray(vertex_coords);
-    //glVertexAttribPointer(vertex_type, 1, GL_INT, GL_FALSE, sizeof(VertexData), (void*)5);
-    //glEnableVertexAttribArray(vertex_type);
-
+    shader_main->set_attrib_f("vertex_position", &VertexData::position);
+    shader_main->set_attrib_f("vertex_coords", &VertexData::coords);
+    shader_main->set_attrib_i("vertex_type", &VertexData::type);
 
     shader_post->use();
     shader_post->set_int("u_screen_texture", 0);
@@ -278,6 +270,8 @@ int window_load(GLFWwindow* const window)
         std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     return 0;
 }
@@ -335,8 +329,9 @@ void window_render(GLFWwindow* const window)
         glm::vec3(-.5f * rasterization_data.dimensions.x, 0.f, -.5f * rasterization_data.dimensions.y)
     );
     const glm::mat4 view = glm::lookAt(camera_position, look_at, glm::vec3(0.f, 1.f, 0.f));
-    const glm::mat4 proj = ortho ? glm::ortho<float>(0, width, 0, height, F_NEAR, F_FAR)
-                                 : glm::perspective(glm::radians(pov / 2), (float)width / (float)height, F_NEAR, F_FAR);
+    const glm::mat4 proj = glm::perspective(glm::radians(pov / 2), (float)width / (float)height, F_NEAR, F_FAR);
+
+    parabola_transform = glm::rotate(parabola_transform, .001f, glm::vec3(0.f, 1.f, 0.f));
 
     shader_main->use();
     shader_main->set_float("u_time", time);
@@ -392,10 +387,6 @@ void window_process_input(GLFWwindow* const window)
         glLineWidth(1);
         glPointSize(3.5f);
     }
-    if (pressed(GLFW_KEY_4))
-        ortho = false;
-    if (pressed(GLFW_KEY_5))
-        ortho = true;
     if (pressed(GLFW_KEY_6))
         effects = false;
     if (pressed(GLFW_KEY_7))
