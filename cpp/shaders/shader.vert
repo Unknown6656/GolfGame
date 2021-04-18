@@ -14,16 +14,18 @@ flat out int type;
 void main()
 {
     pos = vertex_position;
-    pos_model = vec3(u_model * vec4(vertex_position, 1.0));
+    pos_model = vec3(u_model * vec4(vertex_position, 1));
     coords = vertex_coords;
     type = vertex_type;
 
-    mat4 transf = mat4(1.0);
+    mat4 transf;
     
     if (type == TYPE_COURSE)
         transf = u_model;
     else if (type == TYPE_PARABOLA)
         transf = u_parabola;
+    else
+        transf = mat4(1);
 
-    gl_Position = u_projection * u_view * transf * vec4(vertex_position, 1.0);
+    gl_Position = u_projection * u_view * transf * vec4(vertex_position, 1);
 }

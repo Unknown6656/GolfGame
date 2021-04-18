@@ -37,6 +37,7 @@ void main()
 
     color += noise3D(vec3(tex_coords * vec2(u_width, u_height) * .5, u_time * 5)) * .05;
     color -= length(tex_coords - .5) * .4;
+    color *= 1.1;
 
     gl_FragColor = color;
 }
