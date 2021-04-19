@@ -8,7 +8,6 @@ Shader* shader_post = nullptr;
 Shader* shader_font = nullptr;
 unsigned int FBO, RBO, TEX; // framebuffer, renderbuffer, and texturebuffer
 unsigned int VBO_golf, VAO_golf, EBO_golf; // golf course geometry
-unsigned int VBO_font, VAO_font; // font character quad
 unsigned int VBO_quad, VAO_quad; // post-processing quad
 int seed = 420;
 
@@ -81,11 +80,8 @@ int __cdecl main(const int argc, const char** const argv)
         // glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
         font_main = new Font("fonts/smallfont.ttf");
-        exit_code = !font_main->success;
-    }
-
-    if (!exit_code)
         exit_code = window_load(window);
+    }
 
     if (!exit_code)
     {
@@ -248,19 +244,8 @@ int window_load(GLFWwindow* const window)
     shader_main->set_attrib_i("vertex_type", &VertexData::type);
 
 
-    /////////////////////////////////// SET UP FONT SHADER ///////////////////////////////////
-
-    shader_font->use();
-
-    glGenVertexArrays(1, &VAO_font);
-    glGenBuffers(1, &VBO_font);
-    glBindVertexArray(VAO_font);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_font);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 6, nullptr, GL_DYNAMIC_DRAW);
-    glEnableVertexAttribArray(shader_font->get_attrib("glyph_poscoord"));
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(float) * 4, nullptr);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
+    if (!font_main->SetUp(shader_font))
+        return -1;
 
 
     /////////////////////////////////// SET UP POST-PROCESSING SHADER ///////////////////////////////////
@@ -357,7 +342,7 @@ void window_unload(GLFWwindow* const)
 
 inline void render_text(const glm::mat4& camera, const std::string& text, const float x, const float y, const float size, const glm::vec4& color)
 {
-    font_main->RenderText(shader_font, text, glm::vec2(x, y), size, color, VAO_font, VBO_font);
+    font_main->RenderText(camera, shader_font, text, glm::vec2(x, y), size, color);
 }
 
 void window_render(GLFWwindow* const window)
@@ -367,7 +352,7 @@ void window_render(GLFWwindow* const window)
 
     glfwGetWindowSize(window, &width, &height);
 
-    const glm::mat4 ortho = glm::ortho(0, width, 0, height);
+    const glm::mat4 ortho = glm::ortho(0.f, (float)width, 0.f, (float)height, -1.f, 1.f);
 
     glBindFramebuffer(GL_FRAMEBUFFER, effects ? FBO : 0);
     glEnable(GL_DEPTH_TEST);

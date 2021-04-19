@@ -18,11 +18,27 @@ struct Font
 {
     std::string path;
     std::map<char, Character> characters;
-    bool success = false;
+    unsigned int VBO, VAO;
 
 
     Font(const std::string& path)
         : path(path)
+    {
+    }
+
+    void CleanUp() const
+    {
+        glBindVertexArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glDeleteVertexArrays(1, &VAO);
+        glDeleteBuffers(1, &VBO);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        for (const std::pair<char, Character>& pair : characters)
+            glDeleteTextures(1, &pair.second.TextureID);
+    }
+
+    bool SetUp(const Shader* shader)
     {
         FT_Library ft;
         FT_Face face;
@@ -78,33 +94,40 @@ struct Font
                 characters.insert(std::pair<char, Character>((char)chr, character));
             }
 
-            success = true;
             std::cout << characters.size() << " glyphs loaded from '" << path << "." << std::endl;
 
             FT_Done_Face(face);
             FT_Done_FreeType(ft);
+
+            shader->use();
+
+            glGenVertexArrays(1, &VAO);
+            glGenBuffers(1, &VBO);
+            glBindVertexArray(VAO);
+            glBindBuffer(GL_ARRAY_BUFFER, VBO);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 6, nullptr, GL_DYNAMIC_DRAW);
+            glEnableVertexAttribArray(shader->get_attrib("glyph_poscoord"));
+            glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(float) * 4, nullptr);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glBindVertexArray(0);
+
+            return true;
         }
-    }
 
-    void CleanUp() const
-    {
-        glBindTexture(GL_TEXTURE_2D, 0);
-
-        for (const std::pair<char, Character>& pair : characters)
-            glDeleteTextures(1, &pair.second.TextureID);
+        return false;
     }
 
     void RenderText(
+        const glm::mat4& camera,
         const Shader* shader,
         const std::string& text,
         const glm::vec2& position,
         const float scale,
-        const glm::vec4& color,
-        const int VAO,
-        const int VBO
+        const glm::vec4& color
     ) const
     {
         shader->use();
+        shader->set_mat4("projection", camera);
         shader->set_vec4("text_color", color);
         shader->set_int("text", 0);
 
@@ -123,15 +146,15 @@ struct Font
             const float w = character.Size.x * scale;
             const float h = character.Size.y * scale;
 
-            const float vertices[6][4] =
+            const glm::vec2 vertices[12] =
             {
-                { xpos,     ypos + h, 0.f, 0.f },
-                { xpos,     ypos,     0.f, 1.f },
-                { xpos + w, ypos,     1.f, 1.f },
+                glm::vec2(xpos,     ypos + h), glm::vec2(0.f, 0.f),
+                glm::vec2(xpos,     ypos),     glm::vec2(0.f, 1.f),
+                glm::vec2(xpos + w, ypos),     glm::vec2(1.f, 1.f),
 
-                { xpos,     ypos + h, 0.f, 0.f },
-                { xpos + w, ypos,     1.f, 1.f },
-                { xpos + w, ypos + h, 1.f, 0.f }
+                glm::vec2(xpos,     ypos + h), glm::vec2(0.f, 0.f),
+                glm::vec2(xpos + w, ypos),     glm::vec2(1.f, 1.f),
+                glm::vec2(xpos + w, ypos + h), glm::vec2(1.f, 0.f),
             };
 
             glBindTexture(GL_TEXTURE_2D, character.TextureID);
