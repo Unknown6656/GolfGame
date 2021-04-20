@@ -76,10 +76,14 @@ int __cdecl main(const int argc, const char** const argv)
 
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_MULTISAMPLE);
+        glEnable(GL_TEXTURE_2D);
         // glShadeModel(GL_SMOOTH);
         // glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
-        font_main = new Font("fonts/smallfont.ttf");
+        font_main = new Font(
+            "C:/Windows/Fonts/arial.ttf"
+            // "fonts/smallfont.ttf"
+        );
         exit_code = window_load(window);
     }
 
@@ -340,9 +344,14 @@ void window_unload(GLFWwindow* const)
     shader_font = nullptr;
 }
 
-inline void render_text(const glm::mat4& camera, const std::string& text, const float x, const float y, const float size, const glm::vec4& color)
+inline void render_text_2D(const std::string& text, const float screen_w, const float screen_h, const float x, const float y, const float size, const glm::vec4& color)
 {
-    font_main->RenderText(camera, shader_font, text, glm::vec2(x, y), size, color);
+    font_main->RenderText(shader_font, nullptr, glm::vec2(screen_w, screen_h), text, glm::vec2(x, y), size, color);
+}
+
+inline void render_text_3D(const std::string& text, const glm::mat4* camera, const float x, const float y, const float size, const glm::vec4& color)
+{
+    font_main->RenderText(shader_font, camera, glm::vec2(0.f), text, glm::vec2(x, y), size, color);
 }
 
 void window_render(GLFWwindow* const window)
@@ -351,8 +360,6 @@ void window_render(GLFWwindow* const window)
     int width, height;
 
     glfwGetWindowSize(window, &width, &height);
-
-    const glm::mat4 ortho = glm::ortho(0.f, (float)width, 0.f, (float)height, -1.f, 1.f);
 
     glBindFramebuffer(GL_FRAMEBUFFER, effects ? FBO : 0);
     glEnable(GL_DEPTH_TEST);
@@ -385,8 +392,6 @@ void window_render(GLFWwindow* const window)
     glDrawElements(GL_TRIANGLES, rasterization_data.indices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
-    render_text(ortho, format("time: %f", time), 10, 10, 1, from_argb(0xffff0000));
-
     if (effects)
     {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -402,6 +407,14 @@ void window_render(GLFWwindow* const window)
         glBindTexture(GL_TEXTURE_2D, TEX);
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
+
+    //render_text(format("time: %f", time), 10, 10, 1, from_argb(0xffff0000));
+    render_text_2D(format("time: %f", time), width, height, 10, 10, 1, from_argb(0xffff0000));
+
+    render_text_2D("0|0", width, height, 0, 0, 1, from_argb(0xffffff00));
+    render_text_2D("0|1", width, height, 0, height - 50, 1, from_argb(0xff00ff00));
+    render_text_2D("1|0", width, height, width - 100, 0, 1, from_argb(0xffff00ff));
+    render_text_2D("1|1", width, height, width - 100, height - 50, 1, from_argb(0xff0000ff));
 }
 
 void window_process_input(GLFWwindow* const window)

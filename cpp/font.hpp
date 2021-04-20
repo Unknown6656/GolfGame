@@ -16,6 +16,14 @@ struct Character
 
 struct Font
 {
+private:
+    typedef struct
+    {
+        glm::vec2 position;
+        glm::vec2 coords;
+    } vertex;
+
+public:
     std::string path;
     std::map<char, Character> characters;
     unsigned int VBO, VAO;
@@ -101,14 +109,27 @@ struct Font
 
             shader->use();
 
+            const vertex quad_vertices[6] =
+            {
+                // positions      // texcoords
+                { { -1.f, +1.f }, { 0.f, 1.f } },
+                { { -1.f, -1.f }, { 0.f, 0.f } },
+                { { +1.f, -1.f }, { 1.f, 0.f } },
+
+                { { -1.f, +1.f }, { 0.f, 1.f } },
+                { { +1.f, -1.f }, { 1.f, 0.f } },
+                { { +1.f, +1.f }, { 1.f, 1.f } }
+            };
+
             glGenVertexArrays(1, &VAO);
             glGenBuffers(1, &VBO);
             glBindVertexArray(VAO);
             glBindBuffer(GL_ARRAY_BUFFER, VBO);
-            glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 6, nullptr, GL_DYNAMIC_DRAW);
-            glEnableVertexAttribArray(shader->get_attrib("glyph_poscoord"));
-            glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(float) * 4, nullptr);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vertices), &quad_vertices, GL_STATIC_DRAW);
+
+            shader->set_attrib_f("glyph_position", &vertex::position);
+            shader->set_attrib_f("glyph_coords", &vertex::coords);
+
             glBindVertexArray(0);
 
             return true;
@@ -118,27 +139,34 @@ struct Font
     }
 
     void RenderText(
-        const glm::mat4& camera,
         const Shader* shader,
+        const glm::mat4* camera,
+        const glm::vec2& screen_size,
         const std::string& text,
         const glm::vec2& position,
-        const float scale,
+        float scale,
         const glm::vec4& color
     ) const
     {
         shader->use();
-        shader->set_mat4("projection", camera);
-        shader->set_vec4("text_color", color);
         shader->set_int("text", 0);
+        shader->set_vec4("text_color", color);
+        shader->set_int("use_projection", camera > nullptr);
+        shader->set_vec2("screen_size", screen_size);
+
+        if (camera)
+            shader->set_mat4("projection", *camera);
 
         glBindVertexArray(VAO);
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glActiveTexture(GL_TEXTURE0);
 
-        float x = position.x;
-        float y = position.y;
+        float x = position.x + 5;
+        float y = position.y + 10;
 
-        for (std::string::const_iterator chr = text.begin(); chr != text.end(); ++chr)
+        scale *= .5;
+
+        for (const char* chr = text.c_str(); *chr != '\0'; ++chr)
         {
             const Character& character = characters.at(*chr);
             const float xpos = x + character.Bearing.x * scale;
@@ -146,19 +174,10 @@ struct Font
             const float w = character.Size.x * scale;
             const float h = character.Size.y * scale;
 
-            const glm::vec2 vertices[12] =
-            {
-                glm::vec2(xpos,     ypos + h), glm::vec2(0.f, 0.f),
-                glm::vec2(xpos,     ypos),     glm::vec2(0.f, 1.f),
-                glm::vec2(xpos + w, ypos),     glm::vec2(1.f, 1.f),
-
-                glm::vec2(xpos,     ypos + h), glm::vec2(0.f, 0.f),
-                glm::vec2(xpos + w, ypos),     glm::vec2(1.f, 1.f),
-                glm::vec2(xpos + w, ypos + h), glm::vec2(1.f, 0.f),
-            };
+            shader->set_vec2("pos", { xpos, ypos });
+            shader->set_vec2("size", { w, h });
 
             glBindTexture(GL_TEXTURE_2D, character.TextureID);
-            glBufferSubData(GL_ARRAY_BUFFER, 0, 6, vertices);
             glDrawArrays(GL_TRIANGLES, 0, 6);
 
             // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
@@ -174,7 +193,6 @@ struct Font
         }
 
         glBindTexture(GL_TEXTURE_2D, 0);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
     }
 };
