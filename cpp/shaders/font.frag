@@ -1,9 +1,5 @@
-#include "common.glsl"
+#include "font.glsl"
 
-
-uniform mat4 projection;
-uniform vec4 text_color;
-uniform sampler2D text;
 
 in vec2 coords;
 
