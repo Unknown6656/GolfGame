@@ -47,6 +47,8 @@ int __cdecl main(const int argc, const char** const argv)
     glfwWindowHint(GLFW_DOUBLEBUFFER, GL_FALSE);
 #endif
     glfwWindowHint(GLFW_SAMPLES, 2);
+    glfwWindowHint(GLFW_MAXIMIZED, GL_TRUE);
+    glfwWindowHint(GLFW_DECORATED, GL_TRUE);
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
 #endif
@@ -80,10 +82,7 @@ int __cdecl main(const int argc, const char** const argv)
         // glShadeModel(GL_SMOOTH);
         // glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
-        font_main = new Font(
-            "C:/Windows/Fonts/arial.ttf"
-            // "fonts/smallfont.ttf"
-        );
+        font_main = new Font("fonts/arcade.ttf");
         exit_code = window_load(window);
     }
 
@@ -408,13 +407,7 @@ void window_render(GLFWwindow* const window)
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 
-    //render_text(format("time: %f", time), 10, 10, 1, from_argb(0xffff0000));
-    render_text_2D(format("time: %f", time), width, height, 10, 10, 1, from_argb(0xffff0000));
-
-    render_text_2D("0|0", width, height, 0, 0, 1, from_argb(0xffffff00));
-    render_text_2D("0|1", width, height, 0, height - 50, 1, from_argb(0xff00ff00));
-    render_text_2D("1|0", width, height, width - 100, 0, 1, from_argb(0xffff00ff));
-    render_text_2D("1|1", width, height, width - 100, height - 50, 1, from_argb(0xff0000ff));
+    render_text_2D(format("time: %f", time), width, height, 10, 10, 2, from_argb(0xffff8888));
 }
 
 void window_process_input(GLFWwindow* const window)
