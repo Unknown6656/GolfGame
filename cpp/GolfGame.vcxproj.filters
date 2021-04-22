@@ -49,15 +49,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="shaders\post-process.frag" />
-    <CopyFileToFolders Include="shaders\post-process.vert" />
-    <CopyFileToFolders Include="shaders\shader.frag" />
-    <CopyFileToFolders Include="shaders\shader.geom" />
-    <CopyFileToFolders Include="shaders\shader.vert" />
-    <CopyFileToFolders Include="..\dependencies\lib\glew32.dll" />
-    <CopyFileToFolders Include="..\dependencies\lib\glfw3.dll" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="shaders\common.glsl" />
     <None Include="shaders\post-process.frag" />
     <None Include="shaders\post-process.vert" />
@@ -67,8 +58,9 @@
     <None Include="shaders\font.vert" />
     <None Include="shaders\font.frag" />
     <None Include="shaders\shader.glsl" />
+    <None Include="shaders\font.glsl" />
   </ItemGroup>
   <ItemGroup>
-    <Font Include="fonts\smallfont.ttf" />
+    <Font Include="fonts\arcade.ttf" />
   </ItemGroup>
 </Project>
