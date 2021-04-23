@@ -2,7 +2,8 @@
 
 #define INIT_WIDTH 1920
 #define INIT_HEIGHT 1080
-#define FPS_INTERVAL .07
+#define FPS_DISPLAY_INTERVAL .07
+#define FPS_TARGET 60.0
 
 #define DOUBLE_BUFFERING
 
@@ -19,7 +20,7 @@ void __stdcall gl_debug(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, 
 
 int window_load(GLFWwindow* const);
 void window_unload(GLFWwindow* const);
-void window_render(GLFWwindow* const);
+void window_render(GLFWwindow* const, const float);
 void window_resize(GLFWwindow* const, int, int);
-void window_process_input(GLFWwindow* const);
+void window_process_input(GLFWwindow* const, const float);
 

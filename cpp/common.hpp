@@ -20,6 +20,8 @@
 #include <regex>
 #include <cstdio>
 #include <windows.h>
+#include <thread>
+#include <chrono>
 #include <vector>
 #include <random>
 #include <math.h>

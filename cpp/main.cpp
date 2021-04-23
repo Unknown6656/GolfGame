@@ -30,6 +30,7 @@ glm::vec4 color_sun = from_argb(0xFFF7DB09);
 
 RasterizationData rasterization_data;
 GolfCourse* course = nullptr;
+glm::vec2 player_position;
 
 Font* font_main = nullptr;
 
@@ -49,6 +50,7 @@ int __cdecl main(const int argc, const char** const argv)
     glfwWindowHint(GLFW_SAMPLES, 2);
     glfwWindowHint(GLFW_MAXIMIZED, GL_TRUE);
     glfwWindowHint(GLFW_DECORATED, GL_TRUE);
+    glfwWindowHint(GLFW_REFRESH_RATE, FPS_TARGET);
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
 #endif
@@ -88,14 +90,13 @@ int __cdecl main(const int argc, const char** const argv)
 
     if (!exit_code)
     {
-        double curr_time, disp_time = glfwGetTime();
+        double curr_time = glfwGetTime();
+        double disp_time = curr_time;
         int frames = 0;
 
         while (!glfwWindowShouldClose(window))
         {
-            curr_time = glfwGetTime();
-
-            if ((curr_time - disp_time) >= FPS_INTERVAL)
+            if ((curr_time - disp_time) >= FPS_DISPLAY_INTERVAL)
             {
                 std::string title = "Golf Game   [" + std::to_string(frames / (curr_time - disp_time)) + " FPS]";
 
@@ -107,14 +108,21 @@ int __cdecl main(const int argc, const char** const argv)
             else
                 ++frames;
 
-            window_process_input(window);
-            window_render(window);
+            window_process_input(window, curr_time);
+            window_render(window, curr_time);
 #ifdef DOUBLE_BUFFERING
             glfwSwapBuffers(window);
 #else
             glFlush();
 #endif
             glfwPollEvents();
+
+            constexpr double ifps = 1.0 / FPS_TARGET;
+
+            while (glfwGetTime() - curr_time <= ifps)
+                std::this_thread::sleep_for(std::chrono::milliseconds((int)(ifps * 330)));
+
+            curr_time = glfwGetTime() + glfwGetTime() - curr_time - ifps; // add overhead
         }
     }
 
@@ -172,6 +180,19 @@ void gl_error(int error_code, const char* message)
 
 void update_parabola(const glm::vec2 start, const float horizontal_angle, const float angle_of_attack, const float distance)
 {
+    const float height = tan(angle_of_attack) * distance * .25;
+
+    parabola_transform = glm::translate(
+        glm::rotate(
+            glm::scale(
+                glm::mat4(1.f),
+                glm::vec3(distance, height, 0.f)
+            ),
+            horizontal_angle,
+            glm::vec3(0.f, 1.f, 0.f)
+        ),
+        glm::vec3(-start.x, 0.f, -start.y)
+    );
 }
 
 int window_load(GLFWwindow* const window)
@@ -194,6 +215,7 @@ int window_load(GLFWwindow* const window)
 
     course = new GolfCourse(Par::Par4, 2.5f, seed);
     course->rasterize(20, &rasterization_data);
+    player_position = course->_course_start_position.position;
 
     const int parabola_offs = rasterization_data.vertices.size();
     const std::vector<VertexData> parabola_v =
@@ -348,14 +370,16 @@ inline void render_text_2D(const std::string& text, const float screen_w, const 
     font_main->RenderText(shader_font, nullptr, glm::vec2(screen_w, screen_h), text, glm::vec2(x, y), size, color);
 }
 
-inline void render_text_3D(const std::string& text, const glm::mat4* camera, const float x, const float y, const float size, const glm::vec4& color)
+inline void render_text_3D(const std::string& text, glm::mat4 camera, const float x, const float y, const float size, const glm::vec4& color)
 {
-    font_main->RenderText(shader_font, camera, glm::vec2(0.f), text, glm::vec2(x, y), size, color);
+    camera = glm::translate(glm::mat4(1.f), glm::vec3(x, y, 0.f)) * camera;
+    camera = glm::scale(camera, glm::vec3(size));
+
+    font_main->RenderText(shader_font, &camera, glm::vec2(0.f), text, glm::vec3(0.f), 1.f, color);
 }
 
-void window_render(GLFWwindow* const window)
+void window_render(GLFWwindow* const window, const float time)
 {
-    const float time = glfwGetTime();
     int width, height;
 
     glfwGetWindowSize(window, &width, &height);
@@ -407,10 +431,10 @@ void window_render(GLFWwindow* const window)
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 
-    render_text_2D(format("time: %f", time), width, height, 10, 10, 2, from_argb(0xffff8888));
+    render_text_2D(format("time: %f", time), width, height, 10, 10, 1.5, from_argb(0xffff8888));
 }
 
-void window_process_input(GLFWwindow* const window)
+void window_process_input(GLFWwindow* const window, const float time)
 {
 #define pressed(x) glfwGetKey(window, x) == GLFW_PRESS
 
@@ -461,6 +485,18 @@ void window_process_input(GLFWwindow* const window)
         camera_position.z -= .01;
     if (pressed(GLFW_KEY_S))
         camera_position.z += .01;
+
+
+
+    if (pressed(GLFW_KEY_W))
+        camera_position.z -= .01;
+    if (pressed(GLFW_KEY_S))
+        camera_position.z += .01;
+
+
+
+    update_parabola
+
 
     camera_position.xz = glm::clamp(camera_position.xz(), glm::vec2(-1.5f, .5f), glm::vec2(1.5f, 2.3f));
 
