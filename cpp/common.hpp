@@ -27,6 +27,7 @@
 #include <math.h>
 #include <cmath>
 #include <map>
+#include <ppl.h>
 
 // #include <GL/glew.h>
 // #include <GL/wglew.h>
@@ -105,6 +106,20 @@ inline void trim(std::string& s)
 {
     ltrim(s);
     rtrim(s);
+}
+
+template <typename T>
+inline T smooothstep(const T& x)
+{
+    const T clamped = glm::min(glm::max(T(0.f), x), T(1.f));
+
+    return clamped * clamped * (3.f - 2.f * clamped);
+}
+
+template <typename T>
+inline T lerp(const T& x, const T& y, float factor)
+{   
+    return y * factor + x * (1.f - factor);
 }
 
 template <typename ...Args>
