@@ -3,7 +3,7 @@
 #define INIT_WIDTH 1920
 #define INIT_HEIGHT 1080
 #define FPS_DISPLAY_INTERVAL .07
-#define FPS_TARGET 60.0
+#define FPS_TARGET 360.0
 
 #define DOUBLE_BUFFERING
 
