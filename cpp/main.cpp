@@ -9,6 +9,7 @@ Shader* shader_font = nullptr;
 unsigned int FBO, RBO, TEX; // framebuffer, renderbuffer, and texturebuffer
 unsigned int VBO_golf, VAO_golf, EBO_golf; // golf course geometry
 unsigned int VBO_quad, VAO_quad; // post-processing quad
+unsigned int TEX_surface;
 int seed = 420;
 
 bool effects = false;
@@ -214,7 +215,7 @@ int window_load(GLFWwindow* const window)
         shader_main->use();
 
     course = new GolfCourse(Par::Par4, 2.5f, seed);
-    course->rasterize(20, &rasterization_data);
+    course->rasterize(20, 128, &rasterization_data);
     player_position = course->_course_start_position.position;
 
     const int parabola_offs = rasterization_data.vertices.size();
@@ -237,23 +238,30 @@ int window_load(GLFWwindow* const window)
 
     /////////////////////////////////// SET UP MAIN SHADER ///////////////////////////////////
 
-    shader_main->set_vec4("u_colors.outside_bounds", color_outside_bounds);
-    shader_main->set_vec4("u_colors.tee_box", color_tee_box);
-    shader_main->set_vec4("u_colors.rough", color_rough);
-    shader_main->set_vec4("u_colors.fairway", color_fairway);
-    shader_main->set_vec4("u_colors.bunker", color_bunker);
-    shader_main->set_vec4("u_colors.putting_green", color_putting_green);
-    shader_main->set_vec4("u_colors.water", color_water);
-    shader_main->set_vec4("u_colors.sun", color_sun);
-    shader_main->set_vec2("u_dimensions", rasterization_data.dimensions);
-    shader_main->set_int("u_golf_course.par", (int)rasterization_data.par);
-    shader_main->set_float("u_golf_course.tee_size", rasterization_data.tee.size);
-    shader_main->set_vec2("u_golf_course.tee_position", rasterization_data.tee.position);
-    shader_main->set_vec2("u_golf_course.fairway_start_position", rasterization_data.start);
-    shader_main->set_vec2("u_golf_course.mid1_position", rasterization_data.mid[0]);
-    shader_main->set_vec2("u_golf_course.mid2_position", rasterization_data.mid[1]);
-    shader_main->set_vec2("u_golf_course.end_position", rasterization_data.end.position);
-    shader_main->set_float("u_golf_course.end_size", rasterization_data.end.size);
+    glActiveTexture(GL_TEXTURE0);
+    glGenTextures(1, &TEX_surface);
+    glBindTexture(GL_TEXTURE_2D, TEX_surface);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    glm::vec4 default_color((float)SurfaceType::OutsideCourse);
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, (float*)&default_color);
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_RGB,
+        rasterization_data.surface.width,
+        rasterization_data.surface.height,
+        0,
+        GL_RED,
+        GL_UNSIGNED_BYTE,
+        (void*)&rasterization_data.surface.pixels[0]
+    );
+    glGenerateMipmap(GL_TEXTURE_2D);
 
     glGenVertexArrays(1, &VAO_golf);
     glGenBuffers(1, &VBO_golf);
@@ -267,6 +275,22 @@ int window_load(GLFWwindow* const window)
     shader_main->set_attrib_f("vertex_position", &VertexData::position);
     shader_main->set_attrib_f("vertex_coords", &VertexData::coords);
     shader_main->set_attrib_i("vertex_type", &VertexData::type);
+    shader_main->set_int("tex_surface", 0);
+    shader_main->set_vec4("u_colors.outside_bounds", color_outside_bounds);
+    shader_main->set_vec4("u_colors.tee_box", color_tee_box);
+    shader_main->set_vec4("u_colors.rough", color_rough);
+    shader_main->set_vec4("u_colors.fairway", color_fairway);
+    shader_main->set_vec4("u_colors.bunker", color_bunker);
+    shader_main->set_vec4("u_colors.putting_green", color_putting_green);
+    shader_main->set_vec4("u_colors.water", color_water);
+    shader_main->set_vec4("u_colors.sun", color_sun);
+    shader_main->set_vec2("u_dimensions", rasterization_data.dimensions);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    rasterization_data.surface.pixels.clear();
+    rasterization_data.surface.pixels.~vector();
+
 
 
     if (!font_main->SetUp(shader_font))
@@ -411,6 +435,8 @@ void window_render(GLFWwindow* const window, const float time)
     shader_main->set_vec3("u_camera_position", camera_position);
     shader_main->set_vec3("u_light_position", light_position);
 
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, TEX_surface);
     glBindVertexArray(VAO_golf);
     glDrawElements(GL_TRIANGLES, rasterization_data.indices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
@@ -495,7 +521,7 @@ void window_process_input(GLFWwindow* const window, const float time)
 
 
 
-    update_parabola
+    //update_parabola
 
 
     camera_position.xz = glm::clamp(camera_position.xz(), glm::vec2(-1.5f, .5f), glm::vec2(1.5f, 2.3f));
