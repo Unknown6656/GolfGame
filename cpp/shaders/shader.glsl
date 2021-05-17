@@ -1,6 +1,18 @@
 #include "common.glsl"
 
 
+#define SURFACE_TYPE_UNDEFINED 0
+#define SURFACE_TYPE_TEEBOX 1
+#define SURFACE_TYPE_TEEPOINT 2
+#define SURFACE_TYPE_ROUGH 3
+#define SURFACE_TYPE_FAIRWAY 4
+#define SURFACE_TYPE_OUTSIDECOURSE 5
+#define SURFACE_TYPE_PUTTINGGREEN 6
+#define SURFACE_TYPE_PUTTINGHOLE 7
+#define SURFACE_TYPE_BUNKER 8
+#define SURFACE_TYPE_WATER 9
+
+
 uniform mat4 u_model;
 uniform mat4 u_parabola;
 uniform mat4 u_view;
@@ -10,16 +22,7 @@ uniform vec3 u_light_position;
 
 uniform vec2 u_dimensions;
 
-uniform struct {
-    int par;
-    vec2 tee_position;
-    vec2 fairway_start_position;
-    float tee_size;
-    vec2 mid1_position;
-    vec2 mid2_position;
-    vec2 end_position;
-    float end_size;
-} u_golf_course;
+uniform sampler2D tex_surface;
 
 uniform struct {
     vec4 outside_bounds;

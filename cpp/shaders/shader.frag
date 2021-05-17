@@ -9,13 +9,6 @@ flat in int type;
 layout(location = 0) out vec4 gl_FragColor;
 
 
-vec2 displaced_pos(float frequency, float amount)
-{
-    const float offs = noise2D(pos.xz * 2 * frequency) * amount;
-    const float dir = noise2D(pos.xz * frequency) * TAU;
-
-    return vec2(pos.x + cos(dir) * offs, pos.z + sin(dir) * offs);
-}
 
 vec4 main_parabola()
 {
@@ -31,53 +24,43 @@ vec4 main_parabola()
 
 vec4 main_course()
 {
-    const vec2 opos = displaced_pos(3, .05);
-    const bool is_outside_field = opos.x + EPS < 0 || opos.x - EPS > u_dimensions.x || opos.y + EPS < 0 || opos.y - EPS > u_dimensions.y;
+    const float displaced_offs = noise2D(pos.xz * 40) * .02;
+    const float displaced_dir = noise2D(pos.xz * 20) * TAU;
+    const vec2 displaced_coords = coords + mix(
+        vec2(cos(displaced_dir), sin(displaced_dir)) * displaced_offs / u_dimensions,
+        vec2(0),
+        noise2D(pos.xz * 30)
+    );
+    const int type = int(texture2D(tex_surface, displaced_coords).x * 255);
     vec4 color;
 
-    if (length(pos.xz - u_golf_course.end_position) < u_golf_course.end_size)
+    if (type == SURFACE_TYPE_TEEBOX)
+        color = u_colors.tee_box;
+    else if (type == SURFACE_TYPE_TEEPOINT)
+        color = vec4(0, 0, 0, 1);
+    else if (type == SURFACE_TYPE_ROUGH)
+        color = u_colors.rough;
+    else if (type == SURFACE_TYPE_FAIRWAY)
+    {
+        color = u_colors.fairway;
+        color += HATCHET_INTENSITY * (int(pos.x * HATCHET_X + pos.z * HATCHET_Y + HATCHET_OFFS) % 2);
+    }
+    else if (type == SURFACE_TYPE_PUTTINGGREEN)
     {
         color = u_colors.putting_green;
         color += HATCHET_INTENSITY * (int(pos.x * HATCHET_X + pos.z * HATCHET_Y + HATCHET_OFFS) % 2 - int(pos.z * HATCHET_X - pos.x * HATCHET_Y + HATCHET_OFFS) % 2);
     }
-    else if (length(pos.xz - u_golf_course.tee_position) < u_golf_course.tee_size)
-        color = u_colors.tee_box;
+    else if (type == SURFACE_TYPE_PUTTINGHOLE)
+        color = vec4(0, 0, 0, 1);
+    else if (type == SURFACE_TYPE_BUNKER)
+        color = u_colors.water; // TODO: water movement
+    else if (type == SURFACE_TYPE_WATER)
+        color = u_colors.bunker; // TODO: noise
     else
-    {
-        float dist_to_fairway;
+        // SURFACE_TYPE_OUTSIDECOURSE
+        // SURFACE_TYPE_UNDEFINED
+        color = u_colors.outside_bounds;
 
-        if (u_golf_course.par == PAR_3)
-            dist_to_fairway = distance_line_point(u_golf_course.fairway_start_position, u_golf_course.end_position, pos.xz);
-        else if (u_golf_course.par == PAR_4)
-            dist_to_fairway = min(
-                distance_line_point(u_golf_course.fairway_start_position, u_golf_course.mid1_position, pos.xz),
-                distance_line_point(u_golf_course.mid1_position, u_golf_course.end_position, pos.xz)
-            );
-        else if (u_golf_course.par == PAR_5)
-            dist_to_fairway = min(min(
-                distance_line_point(u_golf_course.fairway_start_position, u_golf_course.mid1_position, pos.xz),
-                distance_line_point(u_golf_course.mid1_position, u_golf_course.mid2_position, pos.xz)),
-                distance_line_point(u_golf_course.mid2_position, u_golf_course.end_position, pos.xz)
-            );
-
-        dist_to_fairway += noise2D(pos.xy * 5) * .1;
-
-        const float fairway_size = lerp(
-            (pos.x - u_golf_course.tee_position.x) / (u_golf_course.end_position.x - u_golf_course.tee_position.x),
-            u_golf_course.tee_size,
-            u_golf_course.end_size
-        ) + .15;
-
-        if (dist_to_fairway < fairway_size)
-        {
-            color = u_colors.fairway;
-            color += HATCHET_INTENSITY * (int(pos.x * HATCHET_X + pos.z * HATCHET_Y + HATCHET_OFFS) % 2);
-        }
-        else if (is_outside_field)
-            color = u_colors.outside_bounds;
-        else
-            color = u_colors.rough;
-    }
 
     // diffuse shading
     color += max(dot(vec3(0, 1, 0), normalize(u_light_position - pos_model)), 0) * .2 * u_colors.sun;
