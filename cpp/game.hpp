@@ -53,7 +53,23 @@ struct VertexData
 struct SizedVec2
 {
     glm::vec2 position;
-    float size;
+    float area_size;
+    float point_size;
+};
+
+enum class SurfaceType
+    : unsigned char
+{
+    UNDEFINED = 0,
+    TeeBox = 1,
+    TeePoint = 2,
+    Rough = 3,
+    Fairway = 4,
+    OutsideCourse = 5,
+    PuttingGreen = 6,
+    PuttingHole = 7,
+    Bunker = 8,
+    Water = 9,
 };
 
 struct RasterizationData
@@ -66,18 +82,58 @@ struct RasterizationData
     glm::vec2 start;
     glm::vec2 mid[2];
     SizedVec2 end;
+
+    struct
+    {
+        int width;
+        int height;
+        std::vector<SurfaceType> pixels;
+    } surface;
+
+
+    inline SurfaceType get_ball_position(const glm::vec2& ball_position) const noexcept
+    {
+        const int x = ball_position.x / dimensions.x * surface.width;
+        const int y = ball_position.y / dimensions.y * surface.height;
+
+        if (x < 0 || y < 0 || x >= surface.width || y > surface.height)
+            return SurfaceType::OutsideCourse;
+        else
+            return surface.pixels[y * surface.width + x];
+    }
 };
 
-enum class CurrentBallPosition
+struct Noise
 {
-    UNDEFINED,
-    TeeBox,
-    Rough,
-    Fairway,
-    OutsideCourse,
-    PuttingGreen,
-    Bunker,
-    Water,
+    glm::vec2 seed;
+    float scale;
+
+
+    Noise() noexcept
+        : seed(12.9898f, 78.233f)
+        , scale(43758.5453123f)
+    {
+    }
+
+    inline float random(const glm::vec2& position) const noexcept
+    {
+        const float val = sin(glm::dot(position, seed)) * scale;
+
+        return val - floor(val);
+    }
+
+    inline float noise2d(const glm::vec2& position) const noexcept
+    {
+        const glm::vec2 i = glm::floor(position);
+        const glm::vec2 f = glm::fract(position);
+        const float a = random(i);
+        const float b = random(i + glm::vec2(1.0, 0.0));
+        const float c = random(i + glm::vec2(0.0, 1.0));
+        const float d = random(i + glm::vec2(1.0, 1.0));
+        const glm::vec2 u = glm::smoothstep(0.f, 1.f, f);
+
+        return glm::mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+    }
 };
 
 struct GolfCourse
@@ -89,6 +145,7 @@ struct GolfCourse
     glm::vec2 _fairway_start_position;
     std::vector<glm::vec2> _course_midway_points;
     SizedVec2 _course_putting_green;
+    Noise _noise;
 
 
     GolfCourse(const Par par, const float length, const int seed)
@@ -98,18 +155,22 @@ struct GolfCourse
         _par = par;
         _seed = seed;
         _length = length;
+        _noise = Noise();
+        _noise.seed -= seed;
 
         const float margin = .39f - ((int)par - (int)Par::Par3) * .13f;
 
-        _course_start_position.size = .1f;
+        _course_start_position.point_size = .001f;
+        _course_start_position.area_size = .1f;
         _course_start_position.position = glm::vec2(
-            randf(margin) + _course_start_position.size,
-            randf(1.f - 2.f * _course_start_position.size) + _course_start_position.size
+            randf(margin) + _course_start_position.area_size,
+            randf(1.f - 2.f * _course_start_position.area_size) + _course_start_position.area_size
         );
-        _course_putting_green.size = randf(.1f) + .07f;
+        _course_putting_green.point_size = .001f;
+        _course_putting_green.area_size = randf(.1f) + .07f;
         _course_putting_green.position = glm::vec2(
-            randf(margin) + (length - margin - _course_putting_green.size),
-            randf(1.f - 2.f * _course_putting_green.size) + _course_putting_green.size
+            randf(margin) + (length - margin - _course_putting_green.area_size),
+            randf(1.f - 2.f * _course_putting_green.area_size) + _course_putting_green.area_size
         );
 
         const float φ = std::atan2f(
@@ -149,12 +210,12 @@ struct GolfCourse
         else
             _course_midway_points = std::vector<glm::vec2>();
 
-        const float fsp = (_course_start_position.size + .2) * 2;
+        const float fsp = (_course_start_position.area_size + .2) * 2;
 
         _fairway_start_position = (1 - fsp) * _course_start_position.position + fsp * (par == Par::Par3 ? _course_putting_green.position : _course_midway_points[0]);
     }
 
-    void rasterize(const int subdivisions, RasterizationData* const data) const
+    void rasterize(const int subdivisions, const int texture_height, RasterizationData* const data) const
     {
 #define RADIUS 2.5f
 
@@ -262,49 +323,74 @@ struct GolfCourse
         for (VertexData& vertex : data->vertices)
             vertex.coords = vertex.position.xz / glm::vec2(ratio, 1.f);
 
+
+
+        const int texture_width = texture_height * ratio;
+
+        data->surface.width = texture_width;
+        data->surface.height = texture_height;
+        data->surface.pixels = std::vector<SurfaceType>(texture_height * texture_width);
+
+        Concurrency::parallel_for(size_t(0), size_t(texture_height * texture_width), [&](size_t i)
+        {
+            const int x = i % texture_width;
+            const int y = i / texture_width;
+
+            constexpr float FREQ = 3.f;
+            constexpr float AMOUNT = .05f;
+            const glm::vec2 position(
+                (float)x / (float)texture_height,
+                (float)y / (float)texture_height
+            );
+            const float displacement_dir = _noise.noise2d(position * FREQ) * M_PI * 2.f;
+            const float displacement_offs = _noise.noise2d(position * 2.f * FREQ) * AMOUNT;
+            const glm::vec2 displaced = position + displacement_offs * glm::vec2(cos(displacement_dir), sin(displacement_dir));
+            const bool outside = displaced.x <= 0 || displaced.y <= 0 || displaced.x >= ratio || displaced.y >= 1;
+            SurfaceType& type = data->surface.pixels[y * texture_width + x];
+
+            if (glm::distance(position, _course_putting_green.position) < _course_putting_green.point_size)
+                type = SurfaceType::PuttingHole;
+            else if (glm::distance(position, _course_putting_green.position) < _course_putting_green.area_size)
+                type = SurfaceType::PuttingGreen;
+            else if (glm::distance(position, _course_putting_green.position) < _course_putting_green.point_size)
+                type = SurfaceType::TeePoint;
+            else if (glm::distance(position, _course_putting_green.position) < _course_putting_green.area_size)
+                type = SurfaceType::TeeBox;
+            else
+            {
+                // TODO : water
+                // TODO : bunker
+
+                float distance_to_fairway;
+
+                if (_par == Par::Par3)
+                    distance_to_fairway = distance_line_point(_fairway_start_position, _course_putting_green.position, position);
+                else if (_par == Par::Par4)
+                    distance_to_fairway = std::min(
+                        distance_line_point(_fairway_start_position, data->mid[0], position),
+                        distance_line_point(data->mid[0], _course_putting_green.position, position)
+                    );
+                else if (_par == Par::Par5)
+                    distance_to_fairway = std::min(std::min(
+                        distance_line_point(_fairway_start_position, data->mid[0], position),
+                        distance_line_point(data->mid[0], data->mid[1], position)),
+                        distance_line_point(data->mid[1], _course_putting_green.position, position)
+                    );
+
+                distance_to_fairway += _noise.noise2d(position * 5.f) * .1;
+
+                const float fairway_size_factor = (position.x - _course_start_position.position.x) / (_course_putting_green.position.x - _course_start_position.position.x);
+                const float fairway_size = glm::mix(_course_start_position.area_size, _course_putting_green.area_size, fairway_size_factor) + .15f;
+
+                if (distance_to_fairway < fairway_size)
+                    type = SurfaceType::Fairway;
+                else if (outside)
+                    type = SurfaceType::OutsideCourse;
+                else
+                    type = SurfaceType::Rough;
+            }
+        });
+
 #undef RADIUS
-    }
-
-    inline float get_fairway_size(const float x_position) const noexcept
-    {
-        const float factor = (x_position - _course_start_position.position.x) / (_course_putting_green.position.x - _course_start_position.position.x);
-
-        return (1 - factor) * _course_start_position.size + factor * _course_putting_green.size + .15f;
-    }
-
-    CurrentBallPosition get_ball_position(const glm::vec2 ball_position) const noexcept
-    {
-        if (glm::distance(ball_position, _course_start_position.position) <= _course_start_position.size)
-            return CurrentBallPosition::TeeBox;
-        else if (glm::distance(ball_position, _course_putting_green.position) <= _course_putting_green.size)
-            return CurrentBallPosition::PuttingGreen;
-
-        const float fairway_size = get_fairway_size(ball_position.x);
-        float dist_to_fairway;
-
-        if (_par == Par::Par3)
-            dist_to_fairway = distance_line_point(_course_start_position.position, _course_putting_green.position, ball_position);
-        else if (_par == Par::Par4)
-            dist_to_fairway = std::min(
-                distance_line_point(_course_start_position.position, _course_midway_points[0], ball_position),
-                distance_line_point(_course_midway_points[0], _course_putting_green.position, ball_position)
-            );
-        else if (_par == Par::Par5)
-            dist_to_fairway = std::min(std::min(
-                distance_line_point(_course_start_position.position, _course_midway_points[0], ball_position),
-                distance_line_point(_course_midway_points[0], _course_midway_points[1], ball_position)),
-                distance_line_point(_course_midway_points[1], _course_putting_green.position, ball_position)
-            );
-        else
-            return CurrentBallPosition::UNDEFINED;
-
-        // TODO : water + bunker
-
-        if (dist_to_fairway <= fairway_size)
-            return CurrentBallPosition::Fairway;
-        else if (dist_to_fairway <= fairway_size + .2) // TODO !!!!
-            return CurrentBallPosition::Rough;
-        else
-            return CurrentBallPosition::OutsideCourse;
     }
 };
