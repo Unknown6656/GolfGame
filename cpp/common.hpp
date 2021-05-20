@@ -58,6 +58,11 @@ inline float randf(const float max) noexcept
     return randf() * max;
 }
 
+inline float map(const float x, const float from_min, const float from_max, const float to_min, const float to_max) noexcept
+{
+    return (x - from_min) / (to_min - from_min) * (to_max - from_max) + from_max;
+}
+
 inline glm::vec4 from_argb(const unsigned int argb)
 {
     return glm::vec4(
