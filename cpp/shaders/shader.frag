@@ -13,13 +13,10 @@ layout(location = 0) out vec4 gl_FragColor;
 vec4 main_parabola()
 {
     // check if   1-4(x-.5)^2 == y
-    const float x = coords.x;
-    float y = 2 * (x - .5);
+    const float x = 1 - pow(2 * (coords.x - .5), 2);
+    const float y = PARABOLA_THICKNESS + coords.y / (1 - 2 * PARABOLA_THICKNESS);
 
-    y *= y;
-    y = 1 - y - coords.y * (1 + PARABOLA_THICKNESS);
-
-    return abs(y) <= PARABOLA_THICKNESS ? lerp(x, vec4(.7, 0, 0, .3), vec4(1, 0, 0, .7)) : vec4(0.);
+    return abs(x - y) <= .3 * PARABOLA_THICKNESS / u_parabola_height ? lerp(coords.x, vec4(.7, 0, 0, .3), vec4(1, 0, 0, .7)) : vec4(0);
 }
 
 vec4 main_course()

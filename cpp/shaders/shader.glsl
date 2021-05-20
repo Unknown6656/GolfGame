@@ -12,9 +12,12 @@
 #define SURFACE_TYPE_BUNKER 8
 #define SURFACE_TYPE_WATER 9
 
+#define PARABOLA_THICKNESS .02
+
 
 uniform mat4 u_model;
 uniform mat4 u_parabola;
+uniform float u_parabola_height;
 uniform mat4 u_view;
 uniform mat4 u_projection;
 uniform vec3 u_camera_position;

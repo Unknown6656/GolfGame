@@ -11,8 +11,6 @@ precision highp float;
 #define TYPE_COURSE 0
 #define TYPE_PARABOLA 1
 
-#define PARABOLA_THICKNESS .01
-
 #define HATCHET_X 20
 #define HATCHET_Y 12
 #define HATCHET_OFFS 3
