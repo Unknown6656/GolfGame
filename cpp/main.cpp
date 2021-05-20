@@ -1,4 +1,4 @@
-#define GLEW_STATIC
+﻿#define GLEW_STATIC
 
 #include "main.hpp"
 
@@ -32,6 +32,9 @@ glm::vec4 color_sun = from_argb(0xFFF7DB09);
 RasterizationData rasterization_data;
 GolfCourse* course = nullptr;
 glm::vec2 player_position;
+GolfClubType player_club;
+float player_orientation;
+float player_strength;
 
 Font* font_main = nullptr;
 
@@ -94,6 +97,8 @@ int __cdecl main(const int argc, const char** const argv)
         double curr_time = glfwGetTime();
         double disp_time = curr_time;
         int frames = 0;
+
+        reset_player();
 
         while (!glfwWindowShouldClose(window))
         {
@@ -179,21 +184,35 @@ void gl_error(int error_code, const char* message)
     std::cout << "[GLFW Error] " << error_code << " | " << message << std::endl;
 }
 
-void update_parabola(const glm::vec2 start, const float horizontal_angle, const float angle_of_attack, const float distance)
+void update_parabola(const GolfClubType& club)
 {
-    const float height = tan(angle_of_attack) * distance * .25;
+    // https://danbubanygolf.com/club-fitting-variables-no-5-6-7/
+    const float angle_of_attack = glm::radians(club == GolfClubType::Wood1 ? 10.f
+                                             : club == GolfClubType::Wood2 ? 18.f
+                                             : club == GolfClubType::Iron3 ? 21.f
+                                             : club == GolfClubType::Iron4 ? 24.f
+                                             : club == GolfClubType::Iron5 ? 27.f
+                                             : club == GolfClubType::Iron6 ? 30.f
+                                             : club == GolfClubType::Iron7 ? 34.f
+                                             : club == GolfClubType::Iron8 ? 38.f
+                                             : club == GolfClubType::Iron9 ? 42.f
+                                             : club == GolfClubType::PitchingWedge ? 46.f
+                                             : club == GolfClubType::SandWedge ? 54.f
+                                             : 90.f);
+    const float distance = player_strength * map(angle_of_attack, .1, .95, 1.1, .3);
+    const float height = tan(angle_of_attack) * distance * .25f;
+    const float sinφ = sin(player_orientation);
+    const float cosφ = cos(player_orientation);
 
-    parabola_transform = glm::translate(
-        glm::rotate(
-            glm::scale(
-                glm::mat4(1.f),
-                glm::vec3(distance, height, 0.f)
-            ),
-            horizontal_angle,
-            glm::vec3(0.f, 1.f, 0.f)
-        ),
-        glm::vec3(-start.x, 0.f, -start.y)
+    parabola_transform = glm::mat4(
+                                  distance * cosφ,    0.f,         distance * sinφ, 0.f,
+                                              0.f, height,                     0.f, 0.f,
+                                            -sinφ,    0.f,                    cosφ, 0.f,
+        player_position.x - course->_length * .5f,    0.f, player_position.y - .5f, 1.f
     );
+
+    shader_main->use();
+    shader_main->set_float("u_parabola_height", height);
 }
 
 int window_load(GLFWwindow* const window)
@@ -414,17 +433,15 @@ void window_render(GLFWwindow* const window, const float time)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     const glm::mat4 model = glm::translate(
-        glm::rotate(
-            glm::mat4(1.f),
-            glm::radians(rotation_angle),
-            glm::vec3(0.f, 1.f, 0.f)
-        ),
+        glm::mat4(1.f),
         glm::vec3(-.5f * rasterization_data.dimensions.x, 0.f, -.5f * rasterization_data.dimensions.y)
     );
-    const glm::mat4 view = glm::lookAt(camera_position, look_at, glm::vec3(0.f, 1.f, 0.f));
+    const glm::mat4 view = glm::rotate(
+        glm::lookAt(camera_position, look_at, glm::vec3(0.f, 1.f, 0.f)),
+        glm::radians(rotation_angle),
+        glm::vec3(0.f, 1.f, 0.f)
+    );
     const glm::mat4 proj = glm::perspective(glm::radians(pov / 2), (float)width / (float)height, F_NEAR, F_FAR);
-
-    parabola_transform = glm::rotate(parabola_transform, .001f, glm::vec3(0.f, 1.f, 0.f));
 
     shader_main->use();
     shader_main->set_float("u_time", time);
@@ -457,7 +474,26 @@ void window_render(GLFWwindow* const window, const float time)
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 
-    render_text_2D(format("time: %f", time), width, height, 10, 10, 1.5, from_argb(0xffff8888));
+
+    constexpr const char* lol[12] = {
+        "?",
+        "D",
+        "W2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "I8",
+        "I9",
+        "P",
+        "W",
+    };
+
+
+    render_text_2D(
+        format("club: %s, pos: %f|%f, or: %f, st: %f", lol[(int)player_club], player_position.x, player_position.y, player_orientation, player_strength),
+        width, height, 10, 10, 1.5, from_argb(0xffff8888));
 }
 
 void window_process_input(GLFWwindow* const window, const float time)
@@ -512,19 +548,42 @@ void window_process_input(GLFWwindow* const window, const float time)
     if (pressed(GLFW_KEY_S))
         camera_position.z += .01;
 
+    if (pressed(GLFW_KEY_T))
+        reset_player();
+    if (pressed(GLFW_KEY_RIGHT))
+        player_orientation -= .003;
+    if (pressed(GLFW_KEY_LEFT))
+        player_orientation += .003;
+
+    if (pressed(GLFW_KEY_F) && player_strength > .5)
+        player_strength -= .002;
+    if (pressed(GLFW_KEY_G) && player_strength < 1)
+        player_strength += .002;
 
 
-    if (pressed(GLFW_KEY_W))
-        camera_position.z -= .01;
-    if (pressed(GLFW_KEY_S))
-        camera_position.z += .01;
-
-
-
-    //update_parabola
+    if (pressed(GLFW_KEY_C) && player_club > GolfClubType::Wood1)
+    {
+        Sleep(90);
+        --*(int*)&player_club;
+    }
+    if (pressed(GLFW_KEY_V) && player_club < GolfClubType::SandWedge)
+    {
+        Sleep(90);
+        ++*(int*)&player_club;
+    }
 
 
     camera_position.xz = glm::clamp(camera_position.xz(), glm::vec2(-1.5f, .5f), glm::vec2(1.5f, 2.3f));
 
+    update_parabola(player_club);
+
 #undef pressed
+}
+
+void reset_player()
+{
+    player_position = course->_course_start_position.position;
+    player_orientation = 0;
+    player_club = GolfClubType::Driver;
+    player_strength = 1;
 }

@@ -24,3 +24,5 @@ void window_render(GLFWwindow* const, const float);
 void window_resize(GLFWwindow* const, int, int);
 void window_process_input(GLFWwindow* const, const float);
 
+void reset_player();
+
