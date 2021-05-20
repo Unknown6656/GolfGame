@@ -77,12 +77,12 @@ struct RasterizationData
     std::vector<VertexData> vertices;
     std::vector<int> indices;
     glm::vec2 dimensions;
+    float aspect_ratio;
     Par par;
     SizedVec2 tee;
     glm::vec2 start;
     glm::vec2 mid[2];
     SizedVec2 end;
-
     struct
     {
         int width;
@@ -226,6 +226,7 @@ struct GolfCourse
         const int edge_count = 2 * size_x + 2 * size_y;
 
         *data = RasterizationData();
+        data->aspect_ratio = ratio;
         data->dimensions = glm::vec2(ratio, 1.f);
         data->vertices = std::vector<VertexData>(inner_count + edge_count);
         data->indices = std::vector<int>(6 * size_x * size_y + 6 * edge_count);
@@ -348,39 +349,39 @@ struct GolfCourse
             const bool outside = displaced.x <= 0 || displaced.y <= 0 || displaced.x >= ratio || displaced.y >= 1;
             SurfaceType& type = data->surface.pixels[y * texture_width + x];
 
-            if (glm::distance(position, _course_putting_green.position) < _course_putting_green.point_size)
+            if (glm::distance(position, data->end.position) < data->end.point_size)
                 type = SurfaceType::PuttingHole;
-            else if (glm::distance(position, _course_putting_green.position) < _course_putting_green.area_size)
+            else if (glm::distance(position, data->end.position) < data->end.area_size)
                 type = SurfaceType::PuttingGreen;
-            else if (glm::distance(position, _course_putting_green.position) < _course_putting_green.point_size)
+            else if (glm::distance(position, data->tee.position) < data->tee.point_size)
                 type = SurfaceType::TeePoint;
-            else if (glm::distance(position, _course_putting_green.position) < _course_putting_green.area_size)
+            else if (glm::distance(position, data->tee.position) < data->tee.area_size)
                 type = SurfaceType::TeeBox;
             else
             {
                 // TODO : water
                 // TODO : bunker
 
-                float distance_to_fairway;
+                float distance_to_fairway = 0.f;
 
                 if (_par == Par::Par3)
-                    distance_to_fairway = distance_line_point(_fairway_start_position, _course_putting_green.position, position);
+                    distance_to_fairway = distance_line_point(data->start, data->end.position, position);
                 else if (_par == Par::Par4)
                     distance_to_fairway = std::min(
-                        distance_line_point(_fairway_start_position, data->mid[0], position),
-                        distance_line_point(data->mid[0], _course_putting_green.position, position)
+                        distance_line_point(data->start, data->mid[0], position),
+                        distance_line_point(data->mid[0], data->end.position, position)
                     );
                 else if (_par == Par::Par5)
                     distance_to_fairway = std::min(std::min(
-                        distance_line_point(_fairway_start_position, data->mid[0], position),
+                        distance_line_point(data->start, data->mid[0], position),
                         distance_line_point(data->mid[0], data->mid[1], position)),
-                        distance_line_point(data->mid[1], _course_putting_green.position, position)
+                        distance_line_point(data->mid[1], data->end.position, position)
                     );
 
                 distance_to_fairway += _noise.noise2d(position * 5.f) * .1;
 
-                const float fairway_size_factor = (position.x - _course_start_position.position.x) / (_course_putting_green.position.x - _course_start_position.position.x);
-                const float fairway_size = glm::mix(_course_start_position.area_size, _course_putting_green.area_size, fairway_size_factor) + .15f;
+                const float fairway_size_factor = (position.x - data->tee.position.x) / (data->end.position.x - data->tee.position.x);
+                const float fairway_size = glm::mix(data->tee.area_size, data->end.area_size, fairway_size_factor) + .15f;
 
                 if (distance_to_fairway < fairway_size)
                     type = SurfaceType::Fairway;
@@ -393,4 +394,21 @@ struct GolfCourse
 
 #undef RADIUS
     }
+};
+
+enum class GolfClubType
+{
+    UNKNOWN = 0,
+    Driver = 1,
+    Wood1 = 1,
+    Wood2 = 2,
+    Iron3 = 3,
+    Iron4 = 4,
+    Iron5 = 5,
+    Iron6 = 6,
+    Iron7 = 7,
+    Iron8 = 8,
+    Iron9 = 9,
+    PitchingWedge = 10,
+    SandWedge = 11,
 };
