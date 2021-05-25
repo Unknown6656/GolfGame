@@ -23,21 +23,26 @@ vec4 fetch_pixelated(vec2 offs)
 
 void main()
 {
-    vec2 rgb_offs = vec2(sin(cos(u_time * .1)) * 4 / u_width, 0);
+    if (u_effects == 0)
+        gl_FragColor = texture(u_screen_texture, tex_coords);
+    else
+    {
+        vec2 rgb_offs = vec2(sin(cos(u_time * .1)) * 4 / u_width, 0);
 
-    const vec4 color_g = fetch_pixelated(vec2(0));
-    const vec4 color_r = fetch_pixelated(-rgb_offs);
-    const vec4 color_b = fetch_pixelated(rgb_offs);
-    vec4 color = vec4(color_r.r, color_g.g, color_b.b, color_g.a);
+        const vec4 color_g = fetch_pixelated(vec2(0));
+        const vec4 color_r = fetch_pixelated(-rgb_offs);
+        const vec4 color_b = fetch_pixelated(rgb_offs);
+        vec4 color = vec4(color_r.r, color_g.g, color_b.b, color_g.a);
 
-    if (int(u_height * tex_coords.y + sin(.001 * u_time)) % 10 <= 0)
-        color *= .8 + .2 * noise3D(vec3(tex_coords * 10, u_time));
+        if (int(u_height * tex_coords.y + sin(.001 * u_time)) % 10 <= 0)
+            color *= .8 + .2 * noise3D(vec3(tex_coords * 10, u_time));
 
-    // color = floor(color * COLOR_STEPS) / float(COLOR_STEPS);
+        // color = floor(color * COLOR_STEPS) / float(COLOR_STEPS);
 
-    color += noise3D(vec3(tex_coords * vec2(u_width, u_height) * .5, u_time * 5)) * .05;
-    color -= length(tex_coords - .5) * .4;
-    color *= 1.1;
+        color += noise3D(vec3(tex_coords * vec2(u_width, u_height) * .5, u_time * 5)) * .05;
+        color -= length(tex_coords - .5) * .4;
+        color *= 1.1;
 
-    gl_FragColor = color;
+        gl_FragColor = color;
+    }
 }

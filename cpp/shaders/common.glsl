@@ -27,6 +27,7 @@ precision highp float;
 
 
 uniform float u_time;
+uniform int u_effects;
 
 
 
