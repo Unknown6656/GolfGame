@@ -117,7 +117,7 @@
     <ClInclude Include="game.hpp" />
     <ClInclude Include="main.hpp" />
     <ClInclude Include="shader.hpp" />
-    <ClInclude Include="stb_image.h" />
+    <ClInclude Include="stb_image.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\common.glsl">

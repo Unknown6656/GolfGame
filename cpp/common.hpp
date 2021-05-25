@@ -42,6 +42,9 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.hpp"
+
 
 #define nameof(name) #name
 

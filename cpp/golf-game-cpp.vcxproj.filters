@@ -47,7 +47,7 @@
     <ClInclude Include="font.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="stb_image.h">
+    <ClInclude Include="stb_image.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
