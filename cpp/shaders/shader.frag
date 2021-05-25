@@ -21,14 +21,14 @@ vec4 main_parabola()
 
 vec4 main_course()
 {
-    const float displaced_offs = noise2D(pos.xz * 40) * .02;
-    const float displaced_dir = noise2D(pos.xz * 20) * TAU;
-    const vec2 displaced_coords = coords + mix(
-        vec2(cos(displaced_dir), sin(displaced_dir)) * displaced_offs / u_dimensions,
-        vec2(0),
-        noise2D(pos.xz * 30)
-    );
-    const int type = int(texture2D(tex_surface, displaced_coords).x * 255);
+    // const float displaced_offs = noise2D(pos.xz * 40) * .02;
+    // const float displaced_dir = noise2D(pos.xz * 20) * TAU;
+    // const vec2 displaced_coords = coords + mix(
+    //     vec2(cos(displaced_dir), sin(displaced_dir)) * displaced_offs / u_dimensions,
+    //     vec2(0),
+    //     noise2D(pos.xz * 30)
+    // );
+    const int type = int(texture2D(tex_surface, coords).x * 255);
     vec4 color;
 
     if (type == SURFACE_TYPE_TEEBOX)
