@@ -62,5 +62,6 @@
   </ItemGroup>
   <ItemGroup>
     <Font Include="fonts\arcade.ttf" />
+    <Font Include="fonts\basis33.regular.ttf" />
   </ItemGroup>
 </Project>

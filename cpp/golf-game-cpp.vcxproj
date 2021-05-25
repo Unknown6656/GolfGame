@@ -154,6 +154,7 @@
     <Font Include="fonts\arcade.ttf">
       <DeploymentContent>true</DeploymentContent>
     </Font>
+    <Font Include="fonts\basis33.regular.ttf" />
   </ItemGroup>
   <!--
   <ItemGroup>
