@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31112.23
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GolfGame", "cs\GolfGame.csproj", "{E29868C0-7DDA-4575-8602-3F74575B83D2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "golf-game-cs", "cs\golf-game-cs.csproj", "{E29868C0-7DDA-4575-8602-3F74575B83D2}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GolfGame", "cpp\GolfGame.vcxproj", "{B3C3B49A-8289-48F2-8B95-1614E5BC7552}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "golf-game-cpp", "cpp\golf-game-cpp.vcxproj", "{B3C3B49A-8289-48F2-8B95-1614E5BC7552}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
