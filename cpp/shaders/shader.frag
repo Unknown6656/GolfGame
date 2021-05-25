@@ -21,15 +21,8 @@ vec4 main_parabola()
 
 vec4 main_course()
 {
-    // const float displaced_offs = noise2D(pos.xz * 40) * .02;
-    // const float displaced_dir = noise2D(pos.xz * 20) * TAU;
-    // const vec2 displaced_coords = coords + mix(
-    //     vec2(cos(displaced_dir), sin(displaced_dir)) * displaced_offs / u_dimensions,
-    //     vec2(0),
-    //     noise2D(pos.xz * 30)
-    // );
     const int type = int(texture2D(tex_surface, coords).x * 255);
-    vec4 color;
+    vec4 color = vec4(1, 0, 1, 1);
 
     if (type == SURFACE_TYPE_TEEBOX)
         color = u_colors.tee_box;
@@ -54,15 +47,22 @@ vec4 main_course()
     else if (type == SURFACE_TYPE_WATER)
         color = u_colors.bunker; // TODO: noise
     else
-        // SURFACE_TYPE_OUTSIDECOURSE
-        // SURFACE_TYPE_UNDEFINED
-        color = u_colors.outside_bounds;
+    {
+        const float displaced_offs = noise2D(pos_model.xz * 6) * .2;
+        const float displaced_dir = noise2D(pos_model.xz * 3) * TAU;
+        const vec2 displaced = pos_model.xz + vec2(cos(displaced_dir), sin(displaced_dir)) * displaced_offs / u_dimensions;
+        bvec2 comp = greaterThan(abs(displaced), u_dimensions * .5 + .2);
 
+        if (comp.x || comp.y)
+            color = u_colors.outside_bounds;
+        else
+            color = u_colors.rough;
+    }
 
     // diffuse shading
     const float sun_steps = .05;
     const vec3 sun_position = u_effects == 0 ? pos_model : sun_steps * floor(pos_model / sun_steps);
-    const float sun_intensity = pow(max(dot(vec3(0, 1, 0), normalize(u_light_position - sun_position)), 0), 5) * .5;
+    const float sun_intensity = pow(max(dot(vec3(0, 1, 0), normalize(u_light_position - sun_position)), 0), 5) * .5 + sin(u_time * .1) * .02;
 
     if (u_effects == 0)
         color += sun_intensity * u_colors.sun;
