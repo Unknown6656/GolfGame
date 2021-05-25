@@ -221,14 +221,19 @@ public:
     const std::string image_path;
     int width, height, channels;
     unsigned int texture_id;
+    const int texture_unit;
+    const Shader* shader;
 
 
-    ImageTexture(const std::string& path)
+    ImageTexture(const std::string& path, const Shader* shader, const std::string& uniform_slot, const int texture_unit)
         : image_path(path)
+        , shader(shader)
+        , texture_unit(texture_unit)
     {
         unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, 0);
 
         glGenTextures(1, &texture_id);
+        glActiveTexture(GL_TEXTURE0 + texture_unit);
         glBindTexture(GL_TEXTURE_2D, texture_id);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
@@ -237,22 +242,23 @@ public:
 
         if (data)
         {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
             glGenerateMipmap(GL_TEXTURE_2D);
         }
         else
             std::cerr << "Failed to load texture '" << path << "' into texture slot " << texture_id << std::endl;
 
-        glBindTexture(GL_TEXTURE_2D, 0);
-
         stbi_image_free(data);
-    }
 
-    inline void use(const Shader* shader, const std::string& uniform_slot, const int texture_unit) const
-    {
         shader->use();
         shader->set_int(uniform_slot, texture_unit);
+        shader->set_vec2(uniform_slot + "_size", glm::vec2(width, height));
 
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    inline void bind() const
+    {
         glActiveTexture(GL_TEXTURE0 + texture_unit);
         glBindTexture(GL_TEXTURE_2D, texture_id);
     }
