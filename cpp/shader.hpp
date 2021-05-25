@@ -215,3 +215,46 @@ private:
     }
 };
 
+class ImageTexture
+{
+public:
+    const std::string image_path;
+    int width, height, channels;
+    unsigned int texture_id;
+
+
+    ImageTexture(const std::string& path)
+        : image_path(path)
+    {
+        unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, 0);
+
+        glGenTextures(1, &texture_id);
+        glBindTexture(GL_TEXTURE_2D, texture_id);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+        if (data)
+        {
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+        }
+        else
+            std::cerr << "Failed to load texture '" << path << "' into texture slot " << texture_id << std::endl;
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        stbi_image_free(data);
+    }
+
+    inline void use(const Shader* shader, const std::string& uniform_slot, const int texture_unit) const
+    {
+        shader->use();
+        shader->set_int(uniform_slot, texture_unit);
+
+        glActiveTexture(GL_TEXTURE0 + texture_unit);
+        glBindTexture(GL_TEXTURE_2D, texture_id);
+    }
+};
+
