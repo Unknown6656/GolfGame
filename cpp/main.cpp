@@ -6,11 +6,12 @@
 Shader* shader_main = nullptr;
 Shader* shader_post = nullptr;
 Shader* shader_font = nullptr;
+ImageTexture* img_clubs = nullptr;
 unsigned int FBO, RBO, TEX; // framebuffer, renderbuffer, and texturebuffer
 unsigned int VBO_golf, VAO_golf, EBO_golf; // golf course geometry
 unsigned int VBO_quad, VAO_quad; // post-processing quad
 unsigned int TEX_surface;
-int seed = 420;
+int seed = randf() * 420 + 315;
 
 bool effects = true;
 float pov = 90.0f;
@@ -43,7 +44,7 @@ constexpr const char help_text[] = R"(Keyboard bindings:
 [W] [A] [S] [D]   Move the camera
 [LEFT] [RIGHT]    Turn the player
 [C] [V]           Switch golf clubs
-[F] [G]           Changd player strength
+[F] [G]           Change player/swing strength
 [T]               Reset player
 [ESCAPE]          Quit game
 [F4]              Enable/Disable visual effects
@@ -324,15 +325,13 @@ int window_load(GLFWwindow* const window)
     rasterization_data.surface.pixels.~vector();
 
 
-
     if (!font_main->SetUp(shader_font))
         return -1;
 
-
     /////////////////////////////////// SET UP POST-PROCESSING SHADER ///////////////////////////////////
-
+    img_clubs = new ImageTexture("assets/clubs.png", shader_post, "u_texture_clubs", 2);
     shader_post->use();
-    shader_post->set_int("u_screen_texture", 0);
+    shader_post->set_int("u_texture_screen", 0);
     shader_post->set_float("u_pixelation_factor", PIXELATION_FACTOR);
 
     const int screen_position = shader_post->get_attrib(nameof(screen_position));
@@ -426,11 +425,13 @@ void window_unload(GLFWwindow* const)
     glDeleteFramebuffers(1, &FBO);
 
     delete course;
+    delete img_clubs;
     delete shader_main;
     delete shader_post;
     delete shader_font;
 
     course = nullptr;
+    img_clubs = nullptr;
     shader_main = nullptr;
     shader_post = nullptr;
     shader_font = nullptr;
@@ -490,8 +491,6 @@ void window_render(GLFWwindow* const window, const float time)
     glBindVertexArray(VAO_golf);
     glDrawElements(GL_TRIANGLES, rasterization_data.indices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDisable(GL_DEPTH_TEST);
@@ -502,8 +501,12 @@ void window_render(GLFWwindow* const window, const float time)
     shader_post->set_int("u_width", width);
     shader_post->set_int("u_height", height);
     shader_post->set_int("u_effects", effects);
+    shader_post->set_int("u_selected_club", (int)player_club);
+    shader_post->set_float("u_player_strength", player_strength);
+    img_clubs->bind();
 
     glBindVertexArray(VAO_quad);
+    glActiveTexture(GL_TEXTURE0);
 #ifdef MULTI_SAMPLE
     glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, TEX);
 #else
@@ -519,7 +522,7 @@ void window_render(GLFWwindow* const window, const float time)
     constexpr const char* lol[12] = { "?", "D", "W2", "I3", "I4", "I5", "I6", "I7", "I8", "I9", "P", "W" };
 
     render_text_2D(window, help_text, 10, height - 70, 1.3, from_argb(0xffbbbbbb));
-    render_text_2D(window, format("club: %s, pos: %f|%f, or: %f, st: %f", lol[(int)player_club], player_position.x, player_position.y, player_orientation, player_strength), 10, 10, 1.5, from_argb(0xffff8888));
+    //render_text_2D(window, format("club: %s, pos: %f|%f, or: %f, st: %f", lol[(int)player_club], player_position.x, player_position.y, player_orientation, player_strength), 10, 10, 1.5, from_argb(0xffff8888));
 }
 
 void window_process_input(GLFWwindow* const window, const float time)
@@ -528,7 +531,7 @@ void window_process_input(GLFWwindow* const window, const float time)
 
     if (pressed(GLFW_KEY_ESCAPE))
         glfwSetWindowShouldClose(window, true);
-    else if (pressed(GLFW_KEY_R))
+    else if (pressed(GLFW_KEY_F9))
     {
         Sleep(100);
 
@@ -559,7 +562,7 @@ void window_process_input(GLFWwindow* const window, const float time)
         glLineWidth(1);
         glPointSize(3.5f);
     }
-    
+
     if (pressed(GLFW_KEY_F4))
     {
         Sleep(120);
@@ -590,17 +593,18 @@ void window_process_input(GLFWwindow* const window, const float time)
 
     if (pressed(GLFW_KEY_C) && player_club > GolfClubType::Wood1)
     {
-        Sleep(90);
+        Sleep(120);
         --*(int*)&player_club;
     }
     if (pressed(GLFW_KEY_V) && player_club < GolfClubType::SandWedge)
     {
-        Sleep(90);
+        Sleep(120);
         ++*(int*)&player_club;
     }
 
 
     camera_position.xz = glm::clamp(camera_position.xz(), glm::vec2(-2.f, .5f), glm::vec2(2.f, 2.3f));
+    player_orientation = modpos(player_orientation, 2 * M_PI);
 
     update_parabola();
 
