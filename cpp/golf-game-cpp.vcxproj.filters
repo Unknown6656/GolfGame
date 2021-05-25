@@ -47,6 +47,9 @@
     <ClInclude Include="font.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\common.glsl" />
@@ -61,7 +64,12 @@
     <None Include="shaders\font.glsl" />
   </ItemGroup>
   <ItemGroup>
-    <Font Include="fonts\arcade.ttf" />
-    <Font Include="fonts\basis33.regular.ttf" />
+    <Font Include="assets\arcade.ttf" />
+    <Font Include="assets\basis33.regular.ttf" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="assets\club-icons.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

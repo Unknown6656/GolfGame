@@ -117,6 +117,7 @@
     <ClInclude Include="game.hpp" />
     <ClInclude Include="main.hpp" />
     <ClInclude Include="shader.hpp" />
+    <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\common.glsl">
@@ -151,10 +152,13 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Font Include="fonts\arcade.ttf">
+    <Font Include="assets\arcade.ttf">
       <DeploymentContent>true</DeploymentContent>
     </Font>
-    <Font Include="fonts\basis33.regular.ttf" />
+    <Font Include="assets\basis33.regular.ttf" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="assets\club-icons.png" />
   </ItemGroup>
   <!--
   <ItemGroup>
