@@ -27,14 +27,18 @@ public:
     std::string path;
     std::map<char, Character> characters;
     unsigned int VBO, VAO;
+    float line_spacing;
 
 
-    Font(const std::string& path)
+    Font(const std::string& path) noexcept
         : path(path)
+        , VBO(0)
+        , VAO(0)
+        , line_spacing(0.f)
     {
     }
 
-    void CleanUp() const
+    void CleanUp() const noexcept
     {
         glBindVertexArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -60,6 +64,8 @@ public:
             FT_Set_Pixel_Sizes(face, 0, 48);
 
             glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+            line_spacing = 0.f;
 
             for (int chr = 0; chr <= 255; ++chr)
             {
@@ -100,6 +106,8 @@ public:
                     face->glyph->advance.y
                 };
                 characters.insert(std::pair<char, Character>((char)chr, character));
+
+                line_spacing = std::max(line_spacing, std::max((float)character.Size.y, (float)(character.AdvanceY >> 6)));
             }
 
             std::cout << characters.size() << " glyphs loaded from '" << path << "." << std::endl;
@@ -174,21 +182,23 @@ public:
             const float w = character.Size.x * scale;
             const float h = character.Size.y * scale;
 
-            shader->set_vec2("pos", { xpos, ypos });
-            shader->set_vec2("size", { w, h });
-
-            glBindTexture(GL_TEXTURE_2D, character.TextureID);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
-
-            // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
-            x += (character.AdvanceX >> 6) * scale; // bitshift by 6 to get value in pixels (2^6 = 64)
-
             if (*chr == '\r')
                 x = position.x;
             else if (*chr == '\n')
             {
                 x = position.x;
-                y += (character.AdvanceY >> 6) * scale;
+                y += line_spacing * scale;
+            }
+            else
+            {
+                shader->set_vec2("pos", { xpos, ypos });
+                shader->set_vec2("size", { w, h });
+
+                glBindTexture(GL_TEXTURE_2D, character.TextureID);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+
+                // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
+                x += (character.AdvanceX >> 6) * scale; // bitshift by 6 to get value in pixels (2^6 = 64)
             }
         }
 
