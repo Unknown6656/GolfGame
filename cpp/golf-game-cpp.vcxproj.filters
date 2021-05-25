@@ -68,7 +68,7 @@
     <Font Include="assets\basis33.regular.ttf" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="assets\club-icons.png">
+    <Image Include="assets\clubs.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
