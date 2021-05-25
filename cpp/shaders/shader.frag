@@ -60,7 +60,14 @@ vec4 main_course()
 
 
     // diffuse shading
-    color += max(dot(vec3(0, 1, 0), normalize(u_light_position - pos_model)), 0) * .2 * u_colors.sun;
+    const float sun_steps = .05;
+    const vec3 sun_position = u_effects == 0 ? pos_model : sun_steps * floor(pos_model / sun_steps);
+    const float sun_intensity = pow(max(dot(vec3(0, 1, 0), normalize(u_light_position - sun_position)), 0), 5) * .5;
+
+    if (u_effects == 0)
+        color += sun_intensity * u_colors.sun;
+    else
+        color += sun_steps * .3 * floor(sun_intensity / sun_steps * 2) * u_colors.sun;
 
     return color;
 }
@@ -72,9 +79,9 @@ void main()
         const vec2 para_start = (u_parabola * vec4(0, 0, 0, 1)).xz;
         const vec2 para_end = (u_parabola * vec4(1, 0, 0, 1)).xz;
 
-        if (distance(pos_model.xz, para_start) < PARABOLA_THICKNESS)
+        if (distance(pos_model.xz, para_start) < PARABOLA_THICKNESS * .25)
             gl_FragColor = vec4(.5, 0, 0, 1);
-        else if (distance(pos_model.xz, para_end) < PARABOLA_THICKNESS)
+        else if (distance(pos_model.xz, para_end) < PARABOLA_THICKNESS * .25)
             gl_FragColor = vec4(1, 0, 0, 1);
         else
             gl_FragColor = main_course();
