@@ -61,6 +61,11 @@ inline float randf(const float max) noexcept
     return randf() * max;
 }
 
+inline float modpos(const float x, const float y) noexcept
+{
+    return std::fmodf(std::fmodf(x, y) + y, y);
+}
+
 inline float map(const float x, const float from_min, const float from_max, const float to_min, const float to_max) noexcept
 {
     return (x - from_min) / (to_min - from_min) * (to_max - from_max) + from_max;
