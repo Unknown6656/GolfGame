@@ -12,10 +12,9 @@ unsigned int VBO_quad, VAO_quad; // post-processing quad
 unsigned int TEX_surface;
 int seed = 420;
 
-bool effects = false;
+bool effects = true;
 float pov = 90.0f;
 float rotation_angle = 10.f;
-glm::vec3 look_at = glm::vec3(0.f, 0.f, 0.f);
 glm::vec3 light_position = glm::vec3(0.f, 3.f, -2.f);
 glm::vec3 camera_position = glm::vec3(0.f, 1.6f, 2.f);
 glm::mat4 parabola_transform = glm::mat4(1.f);
@@ -38,6 +37,18 @@ float player_strength;
 
 Font* font_main = nullptr;
 
+//constexpr const char font_path[] = "assets/arcade.ttf";
+constexpr const char font_path[] = "assets/basis33.regular.ttf";
+constexpr const char help_text[] = R"(Keyboard bindings:
+[W] [A] [S] [D]   Move the camera
+[LEFT] [RIGHT]    Turn the player
+[C] [V]           Switch golf clubs
+[F] [G]           Changd player strength
+[T]               Reset player
+[ESCAPE]          Quit game
+[F4]              Enable/Disable visual effects
+)";
+
 
 int __cdecl main(const int argc, const char** const argv)
 {
@@ -51,7 +62,9 @@ int __cdecl main(const int argc, const char** const argv)
 #else
     glfwWindowHint(GLFW_DOUBLEBUFFER, GL_FALSE);
 #endif
-    glfwWindowHint(GLFW_SAMPLES, 2);
+#ifdef MULTI_SAMPLE
+    glfwWindowHint(GLFW_SAMPLES, MULTI_SAMPLE);
+#endif
     glfwWindowHint(GLFW_MAXIMIZED, GL_TRUE);
     glfwWindowHint(GLFW_DECORATED, GL_TRUE);
     glfwWindowHint(GLFW_REFRESH_RATE, FPS_TARGET);
@@ -88,7 +101,7 @@ int __cdecl main(const int argc, const char** const argv)
         // glShadeModel(GL_SMOOTH);
         // glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
-        font_main = new Font("fonts/arcade.ttf");
+        font_main = new Font(font_path);
         exit_code = window_load(window);
     }
 
@@ -184,20 +197,20 @@ void gl_error(int error_code, const char* message)
     std::cout << "[GLFW Error] " << error_code << " | " << message << std::endl;
 }
 
-void update_parabola(const GolfClubType& club)
+void update_parabola()
 {
     // https://danbubanygolf.com/club-fitting-variables-no-5-6-7/
-    const float angle_of_attack = glm::radians(club == GolfClubType::Wood1 ? 10.f
-                                             : club == GolfClubType::Wood2 ? 18.f
-                                             : club == GolfClubType::Iron3 ? 21.f
-                                             : club == GolfClubType::Iron4 ? 24.f
-                                             : club == GolfClubType::Iron5 ? 27.f
-                                             : club == GolfClubType::Iron6 ? 30.f
-                                             : club == GolfClubType::Iron7 ? 34.f
-                                             : club == GolfClubType::Iron8 ? 38.f
-                                             : club == GolfClubType::Iron9 ? 42.f
-                                             : club == GolfClubType::PitchingWedge ? 46.f
-                                             : club == GolfClubType::SandWedge ? 54.f
+    const float angle_of_attack = glm::radians(player_club == GolfClubType::Wood1 ? 10.f
+                                             : player_club == GolfClubType::Wood2 ? 18.f
+                                             : player_club == GolfClubType::Iron3 ? 21.f
+                                             : player_club == GolfClubType::Iron4 ? 24.f
+                                             : player_club == GolfClubType::Iron5 ? 27.f
+                                             : player_club == GolfClubType::Iron6 ? 30.f
+                                             : player_club == GolfClubType::Iron7 ? 34.f
+                                             : player_club == GolfClubType::Iron8 ? 38.f
+                                             : player_club == GolfClubType::Iron9 ? 42.f
+                                             : player_club == GolfClubType::PitchingWedge ? 46.f
+                                             : player_club == GolfClubType::SandWedge ? 54.f
                                              : 90.f);
     const float distance = player_strength * map(angle_of_attack, .1, .95, 1.1, .3);
     const float height = tan(angle_of_attack) * distance * .25f;
@@ -353,21 +366,36 @@ int window_load(GLFWwindow* const window)
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
     glGenTextures(1, &TEX);
+#ifdef MULTI_SAMPLE
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, TEX);
+    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, MULTI_SAMPLE, GL_RGB, INIT_WIDTH, INIT_HEIGHT, false);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, TEX, 0);
+#else
     glBindTexture(GL_TEXTURE_2D, TEX);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, INIT_WIDTH, INIT_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, TEX, 0);
+#endif
 
     glGenRenderbuffers(1, &RBO);
     glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+#ifdef MULTI_SAMPLE
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, MULTI_SAMPLE, GL_DEPTH24_STENCIL8, INIT_WIDTH, INIT_HEIGHT);
+#else
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, INIT_WIDTH, INIT_HEIGHT);
+#endif
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+#ifdef MULTI_SAMPLE
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+#else
+    glBindTexture(GL_TEXTURE_2D, 0);
+#endif
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -408,9 +436,12 @@ void window_unload(GLFWwindow* const)
     shader_font = nullptr;
 }
 
-inline void render_text_2D(const std::string& text, const float screen_w, const float screen_h, const float x, const float y, const float size, const glm::vec4& color)
+inline void render_text_2D(GLFWwindow* const window, const std::string& text, const float x, const float y, const float size, const glm::vec4& color)
 {
-    font_main->RenderText(shader_font, nullptr, glm::vec2(screen_w, screen_h), text, glm::vec2(x, y), size, color);
+    int width, height;
+
+    glfwGetWindowSize(window, &width, &height);
+    font_main->RenderText(shader_font, nullptr, glm::vec2(width, height), text, glm::vec2(x, y), size, color);
 }
 
 inline void render_text_3D(const std::string& text, glm::mat4 camera, const float x, const float y, const float size, const glm::vec4& color)
@@ -427,11 +458,12 @@ void window_render(GLFWwindow* const window, const float time)
 
     glfwGetWindowSize(window, &width, &height);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, effects ? FBO : 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
     glEnable(GL_DEPTH_TEST);
     glClearColor(.2f, .3f, .3f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    const glm::vec3 look_at = glm::vec3((parabola_transform * glm::vec4(0.f, 0.f, 0.f, 1.f)).xyz * .5f);
     const glm::mat4 model = glm::translate(
         glm::mat4(1.f),
         glm::vec3(-.5f * rasterization_data.dimensions.x, 0.f, -.5f * rasterization_data.dimensions.y)
@@ -445,6 +477,7 @@ void window_render(GLFWwindow* const window, const float time)
 
     shader_main->use();
     shader_main->set_float("u_time", time);
+    shader_main->set_int("u_effects", effects);
     shader_main->set_mat4("u_model", model);
     shader_main->set_mat4("u_parabola", parabola_transform);
     shader_main->set_mat4("u_view", view);
@@ -457,43 +490,36 @@ void window_render(GLFWwindow* const window, const float time)
     glBindVertexArray(VAO_golf);
     glDrawElements(GL_TRIANGLES, rasterization_data.indices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
-
-    if (effects)
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glDisable(GL_DEPTH_TEST);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        shader_post->use();
-        shader_post->set_float("u_time", time);
-        shader_post->set_int("u_width", width);
-        shader_post->set_int("u_height", height);
-
-        glBindVertexArray(VAO_quad);
-        glBindTexture(GL_TEXTURE_2D, TEX);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-    }
+    glBindTexture(GL_TEXTURE_2D, 0);
 
 
-    constexpr const char* lol[12] = {
-        "?",
-        "D",
-        "W2",
-        "I3",
-        "I4",
-        "I5",
-        "I6",
-        "I7",
-        "I8",
-        "I9",
-        "P",
-        "W",
-    };
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDisable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT);
 
+    shader_post->use();
+    shader_post->set_float("u_time", time);
+    shader_post->set_int("u_width", width);
+    shader_post->set_int("u_height", height);
+    shader_post->set_int("u_effects", effects);
 
-    render_text_2D(
-        format("club: %s, pos: %f|%f, or: %f, st: %f", lol[(int)player_club], player_position.x, player_position.y, player_orientation, player_strength),
-        width, height, 10, 10, 1.5, from_argb(0xffff8888));
+    glBindVertexArray(VAO_quad);
+#ifdef MULTI_SAMPLE
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, TEX);
+#else
+    glBindTexture(GL_TEXTURE_2D, TEX);
+#endif
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+#ifdef MULTI_SAMPLE
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+#else
+    glBindTexture(GL_TEXTURE_2D, 0);
+#endif
+
+    constexpr const char* lol[12] = { "?", "D", "W2", "I3", "I4", "I5", "I6", "I7", "I8", "I9", "P", "W" };
+
+    render_text_2D(window, help_text, 10, height - 70, 1.3, from_argb(0xffbbbbbb));
+    render_text_2D(window, format("club: %s, pos: %f|%f, or: %f, st: %f", lol[(int)player_club], player_position.x, player_position.y, player_orientation, player_strength), 10, 10, 1.5, from_argb(0xffff8888));
 }
 
 void window_process_input(GLFWwindow* const window, const float time)
@@ -535,9 +561,10 @@ void window_process_input(GLFWwindow* const window, const float time)
     }
     
     if (pressed(GLFW_KEY_F4))
-        effects = false;
-    else if (pressed(GLFW_KEY_F5))
-        effects = true;
+    {
+        Sleep(120);
+        effects ^= true;
+    }
 
     if (pressed(GLFW_KEY_A))
         camera_position.x -= .01;
@@ -573,9 +600,9 @@ void window_process_input(GLFWwindow* const window, const float time)
     }
 
 
-    camera_position.xz = glm::clamp(camera_position.xz(), glm::vec2(-1.5f, .5f), glm::vec2(1.5f, 2.3f));
+    camera_position.xz = glm::clamp(camera_position.xz(), glm::vec2(-2.f, .5f), glm::vec2(2.f, 2.3f));
 
-    update_parabola(player_club);
+    update_parabola();
 
 #undef pressed
 }

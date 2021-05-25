@@ -4,7 +4,7 @@
 #define INIT_HEIGHT 1080
 #define FPS_DISPLAY_INTERVAL .07
 #define FPS_TARGET 360.0
-
+//#define MULTI_SAMPLE 4
 #define DOUBLE_BUFFERING
 
 
