@@ -187,7 +187,7 @@ public:
             else if (*chr == '\n')
             {
                 x = position.x;
-                y += line_spacing * scale;
+                y -= line_spacing * scale * 1.1;
             }
             else
             {
