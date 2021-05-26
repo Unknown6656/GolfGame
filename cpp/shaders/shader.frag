@@ -15,6 +15,16 @@ vec4 main_parabola()
     // check if   1-4(x-.5)^2 == y
     const float x = 1 - pow(2 * (coords.x - .5), 2);
     const float y = PARABOLA_THICKNESS + coords.y / (1 - 2 * PARABOLA_THICKNESS);
+    const vec2 ball_diff = coords - vec2(u_ball_position, 1 - pow(2 * (u_ball_position - .5), 2) + PARABOLA_THICKNESS);
+    const float ball_dist = sqrt(ball_diff.x * ball_diff.x + ball_diff.y * ball_diff.y * u_parabola_height);
+
+    if (ball_dist <= PARABOLA_THICKNESS * 1.2)
+        return vec4(1);
+    else if (u_ball_position < 0 && abs(x - y) <= .3 * PARABOLA_THICKNESS / u_parabola_height)
+        return lerp(coords.x, vec4(.7, 0, 0, .3), vec4(1, 0, 0, .7));
+    else
+        return vec4(0);
+}
 
 vec4 main_player()
 {
@@ -95,6 +105,10 @@ void main()
     }
     else if (type == TYPE_PARABOLA)
         gl_FragColor = main_parabola();
+    else if (type == TYPE_PLAYER)
+        gl_FragColor = main_player();
+    else if (type == TYPE_FLAGPOLE)
+        gl_FragColor = main_flagpole();
     else
         gl_FragColor = vec4(1, 0, 1, 1);
 }
