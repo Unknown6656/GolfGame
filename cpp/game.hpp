@@ -14,6 +14,8 @@ enum class VertexType
 {
     Course = 0,
     Parabola = 1,
+    Player = 2,
+    Flagpole = 3,
 };
 
 struct VertexData
@@ -411,4 +413,5 @@ enum class GolfClubType
     Iron9 = 9,
     PitchingWedge = 10,
     SandWedge = 11,
+    Putter = 12,
 };

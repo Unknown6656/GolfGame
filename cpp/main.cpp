@@ -3,6 +3,7 @@
 #include "main.hpp"
 
 
+
 Shader* shader_main = nullptr;
 Shader* shader_post = nullptr;
 Shader* shader_font = nullptr;
@@ -14,10 +15,10 @@ unsigned int TEX_surface;
 int seed = randf() * 420 + 315;
 
 bool effects = true;
-float pov = 90.0f;
+float fov = 90.0f;
 float rotation_angle = 10.f;
 glm::vec3 light_position = glm::vec3(0.f, 3.f, -2.f);
-glm::vec3 camera_position = glm::vec3(0.f, 1.6f, 2.f);
+glm::vec3 camera_position = glm::vec3(0.f, 1.6f, 2.3f);
 glm::mat4 parabola_transform = glm::mat4(1.f);
 
 glm::vec4 color_outside_bounds = from_argb(0xFF043925);
@@ -31,10 +32,13 @@ glm::vec4 color_sun = from_argb(0xFFF7DB09);
 
 RasterizationData rasterization_data;
 GolfCourse* course = nullptr;
+glm::vec2 player_ball_target;
 glm::vec2 player_position;
 GolfClubType player_club;
 float player_orientation;
 float player_strength;
+float ball_position;
+volatile bool is_animating;
 
 Font* font_main = nullptr;
 
@@ -42,9 +46,11 @@ Font* font_main = nullptr;
 constexpr const char font_path[] = "assets/basis33.regular.ttf";
 constexpr const char help_text[] = R"(Keyboard bindings:
 [W] [A] [S] [D]   Move the camera
+[E] [R]           Zoom in or out
 [LEFT] [RIGHT]    Turn the player
 [C] [V]           Switch golf clubs
 [F] [G]           Change player/swing strength
+[ENTER]           Play / execute swing
 [T]               Reset player
 [ESCAPE]          Quit game
 [F4]              Enable/Disable visual effects
@@ -109,6 +115,7 @@ int __cdecl main(const int argc, const char** const argv)
     if (!exit_code)
     {
         double curr_time = glfwGetTime();
+        double inpt_time = curr_time;
         double disp_time = curr_time;
         int frames = 0;
 
@@ -118,9 +125,7 @@ int __cdecl main(const int argc, const char** const argv)
         {
             if ((curr_time - disp_time) >= FPS_DISPLAY_INTERVAL)
             {
-                std::string title = "Golf Game   [" + std::to_string(frames / (curr_time - disp_time)) + " FPS]";
-
-                glfwSetWindowTitle(window, title.c_str());
+                glfwSetWindowTitle(window, format("Golf Game   [%f FPS]", frames / (curr_time - disp_time)).c_str());
 
                 frames = 0;
                 disp_time = curr_time;
@@ -128,7 +133,13 @@ int __cdecl main(const int argc, const char** const argv)
             else
                 ++frames;
 
-            window_process_input(window, curr_time);
+            if ((curr_time - inpt_time) * TPS_TARGET >= 1)
+            {
+                window_process_input(window, curr_time);
+
+                inpt_time = curr_time;
+            }
+
             window_render(window, curr_time);
 #ifdef DOUBLE_BUFFERING
             glfwSwapBuffers(window);
@@ -212,11 +223,15 @@ void update_parabola()
                                              : player_club == GolfClubType::Iron9 ? 42.f
                                              : player_club == GolfClubType::PitchingWedge ? 46.f
                                              : player_club == GolfClubType::SandWedge ? 54.f
+                                             : player_club == GolfClubType::Putter ? .6f
                                              : 90.f);
-    const float distance = player_strength * map(angle_of_attack, .1, .95, 1.1, .3);
+    float distance = player_strength * map(angle_of_attack, .943, .17, .25, 1.5);
     const float height = tan(angle_of_attack) * distance * .25f;
     const float sinφ = sin(player_orientation);
     const float cosφ = cos(player_orientation);
+
+    if (player_club == GolfClubType::Putter)
+        distance = player_strength * .12f;
 
     parabola_transform = glm::mat4(
                                   distance * cosφ,    0.f,         distance * sinφ, 0.f,
@@ -225,8 +240,41 @@ void update_parabola()
         player_position.x - course->_length * .5f,    0.f, player_position.y - .5f, 1.f
     );
 
+    const float target_distance = distance + randf() * .1f;
+    const float target_angle = player_orientation + randf() * .1f;
+
+    // player_ball_target = player_position + glm::vec2(cos(target_angle), sin(target_angle)) * target_distance;
+    player_ball_target = player_position + glm::vec2(cos(player_orientation), sin(player_orientation)) * distance;
+
     shader_main->use();
     shader_main->set_float("u_parabola_height", height);
+}
+
+void animate_ball()
+{
+    if (!is_animating)
+    {
+        is_animating = true;
+
+        std::thread([&]()
+            {
+                constexpr int TOTAL_MS = 700;
+                const float t_start = glfwGetTime();
+
+                ball_position = 0;
+
+                while (ball_position < 1)
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+                    ball_position = (glfwGetTime() - t_start) * 1000.f / TOTAL_MS;
+                }
+
+                ball_position = -1;
+                is_animating = false;
+                player_position = player_ball_target;
+            }).detach();
+    }
 }
 
 int window_load(GLFWwindow* const window)
@@ -251,22 +299,34 @@ int window_load(GLFWwindow* const window)
     course->rasterize(20, 128, &rasterization_data);
     player_position = course->_course_start_position.position;
 
-    const int parabola_offs = rasterization_data.vertices.size();
-    const std::vector<VertexData> parabola_v =
+    const int vertex_index_offs = rasterization_data.vertices.size();
+    const std::vector<VertexData> vertices =
     {
         VertexData(glm::vec3(0, 0, 0), glm::vec2(0, 0), VertexType::Parabola),
         VertexData(glm::vec3(0, 1, 0), glm::vec2(0, 1), VertexType::Parabola),
         VertexData(glm::vec3(1, 1, 0), glm::vec2(1, 1), VertexType::Parabola),
         VertexData(glm::vec3(1, 0, 0), glm::vec2(1, 0), VertexType::Parabola),
+        VertexData(glm::vec3(0, 0, 0), glm::vec2(0, 0), VertexType::Player),
+        VertexData(glm::vec3(0, 1, 0), glm::vec2(0, 1), VertexType::Player),
+        VertexData(glm::vec3(1, 1, 0), glm::vec2(1, 1), VertexType::Player),
+        VertexData(glm::vec3(1, 0, 0), glm::vec2(1, 0), VertexType::Player),
+        VertexData(glm::vec3(0, 0, 0), glm::vec2(0, 0), VertexType::Flagpole),
+        VertexData(glm::vec3(0, 1, 0), glm::vec2(0, 1), VertexType::Flagpole),
+        VertexData(glm::vec3(1, 1, 0), glm::vec2(1, 1), VertexType::Flagpole),
+        VertexData(glm::vec3(1, 0, 0), glm::vec2(1, 0), VertexType::Flagpole),
     };
-    const std::vector<int> parabola_i =
+    const std::vector<int> indices =
     {
-        parabola_offs, parabola_offs + 1, parabola_offs + 2,
-        parabola_offs, parabola_offs + 2, parabola_offs + 3,
+        vertex_index_offs, vertex_index_offs + 1, vertex_index_offs + 2,
+        vertex_index_offs, vertex_index_offs + 2, vertex_index_offs + 3,
+        vertex_index_offs + 4, vertex_index_offs + 5, vertex_index_offs + 6,
+        vertex_index_offs + 4, vertex_index_offs + 6, vertex_index_offs + 7,
+        vertex_index_offs + 8, vertex_index_offs + 9, vertex_index_offs + 10,
+        vertex_index_offs + 8, vertex_index_offs + 10, vertex_index_offs + 11,
     };
 
-    rasterization_data.vertices.insert(rasterization_data.vertices.end(), parabola_v.begin(), parabola_v.end());
-    rasterization_data.indices.insert(rasterization_data.indices.end(), parabola_i.begin(), parabola_i.end());
+    rasterization_data.vertices.insert(rasterization_data.vertices.end(), vertices.begin(), vertices.end());
+    rasterization_data.indices.insert(rasterization_data.indices.end(), indices.begin(), indices.end());
 
 
     /////////////////////////////////// SET UP MAIN SHADER ///////////////////////////////////
@@ -474,17 +534,20 @@ void window_render(GLFWwindow* const window, const float time)
         glm::radians(rotation_angle),
         glm::vec3(0.f, 1.f, 0.f)
     );
-    const glm::mat4 proj = glm::perspective(glm::radians(pov / 2), (float)width / (float)height, F_NEAR, F_FAR);
+    const glm::mat4 proj = glm::perspective(glm::radians(fov / 2), (float)width / (float)height, F_NEAR, F_FAR);
 
     shader_main->use();
     shader_main->set_float("u_time", time);
     shader_main->set_int("u_effects", effects);
     shader_main->set_mat4("u_model", model);
     shader_main->set_mat4("u_parabola", parabola_transform);
+    //shader_main->set_mat4("u_player", );
+    //shader_main->set_mat4("u_flagpole", );
     shader_main->set_mat4("u_view", view);
     shader_main->set_mat4("u_projection", proj);
     shader_main->set_vec3("u_camera_position", camera_position);
     shader_main->set_vec3("u_light_position", light_position);
+    shader_main->set_float("u_ball_position", ball_position);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, TEX_surface);
@@ -521,7 +584,8 @@ void window_render(GLFWwindow* const window, const float time)
 
     constexpr const char* lol[12] = { "?", "D", "W2", "I3", "I4", "I5", "I6", "I7", "I8", "I9", "P", "W" };
 
-    render_text_2D(window, help_text, 10, height - 70, 1.3, from_argb(0xffbbbbbb));
+    if (!is_animating)
+        render_text_2D(window, help_text, 10, height - 70, 1.3, from_argb(0xffbbbbbb));
     //render_text_2D(window, format("club: %s, pos: %f|%f, or: %f, st: %f", lol[(int)player_club], player_position.x, player_position.y, player_orientation, player_strength), 10, 10, 1.5, from_argb(0xffff8888));
 }
 
@@ -531,7 +595,11 @@ void window_process_input(GLFWwindow* const window, const float time)
 
     if (pressed(GLFW_KEY_ESCAPE))
         glfwSetWindowShouldClose(window, true);
-    else if (pressed(GLFW_KEY_F9))
+
+    if (is_animating)
+        return;
+
+    if (pressed(GLFW_KEY_F9))
     {
         Sleep(100);
 
@@ -570,41 +638,54 @@ void window_process_input(GLFWwindow* const window, const float time)
     }
 
     if (pressed(GLFW_KEY_A))
-        camera_position.x -= .01;
+        camera_position.x -= CAMERA_SPEED;
     if (pressed(GLFW_KEY_D))
-        camera_position.x += .01;
+        camera_position.x += CAMERA_SPEED;
     if (pressed(GLFW_KEY_W))
-        camera_position.z -= .01;
+    {
+        camera_position.y -= CAMERA_SPEED * .5;
+        camera_position.z -= CAMERA_SPEED;
+    }
     if (pressed(GLFW_KEY_S))
-        camera_position.z += .01;
+    {
+        camera_position.y += CAMERA_SPEED * .5;
+        camera_position.z += CAMERA_SPEED;
+    }
+    if (pressed(GLFW_KEY_R))
+        fov += CAMERA_SPEED * 12;
+    if (pressed(GLFW_KEY_E))
+        fov -= CAMERA_SPEED * 12;
 
     if (pressed(GLFW_KEY_T))
         reset_player();
     if (pressed(GLFW_KEY_RIGHT))
-        player_orientation -= .003;
+        player_orientation -= ROTATION_SPEED;
     if (pressed(GLFW_KEY_LEFT))
-        player_orientation += .003;
+        player_orientation += ROTATION_SPEED;
 
-    if (pressed(GLFW_KEY_F) && player_strength > .5)
-        player_strength -= .002;
-    if (pressed(GLFW_KEY_G) && player_strength < 1)
-        player_strength += .002;
-
+    if (pressed(GLFW_KEY_F))
+        player_strength -= STRENGTH_SPEED;
+    if (pressed(GLFW_KEY_G))
+        player_strength += STRENGTH_SPEED;
 
     if (pressed(GLFW_KEY_C) && player_club > GolfClubType::Wood1)
     {
         Sleep(120);
         --*(int*)&player_club;
     }
-    if (pressed(GLFW_KEY_V) && player_club < GolfClubType::SandWedge)
+    if (pressed(GLFW_KEY_V) && player_club < GolfClubType::Putter)
     {
         Sleep(120);
         ++*(int*)&player_club;
     }
 
+    if (pressed(GLFW_KEY_ENTER))
+        animate_ball();
 
-    camera_position.xz = glm::clamp(camera_position.xz(), glm::vec2(-2.f, .5f), glm::vec2(2.f, 2.3f));
+    fov = glm::clamp(fov, 60.f, 100.f);
     player_orientation = modpos(player_orientation, 2 * M_PI);
+    player_strength = glm::clamp(player_strength, .3f, 1.f);
+    camera_position = glm::clamp(camera_position, glm::vec3(-2.f, .6f, .3f), glm::vec3(2.f, 1.6f, 2.3f));
 
     update_parabola();
 
@@ -617,4 +698,6 @@ void reset_player()
     player_orientation = 0;
     player_club = GolfClubType::Driver;
     player_strength = 1;
+    ball_position = -1;
+    is_animating = false;
 }
