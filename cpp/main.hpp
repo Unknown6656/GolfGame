@@ -4,6 +4,12 @@
 #define INIT_HEIGHT 1080
 #define FPS_DISPLAY_INTERVAL .07
 #define FPS_TARGET 360.0
+#define TPS_TARGET 60.0
+
+#define CAMERA_SPEED .05
+#define ROTATION_SPEED .02
+#define STRENGTH_SPEED .01
+
 //#define MULTI_SAMPLE 4
 #define DOUBLE_BUFFERING
 
