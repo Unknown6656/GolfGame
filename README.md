@@ -4,4 +4,5 @@ This is repository contains a C++/OpenGL-based golf game. **Warning: This is cur
 
 Current progress:
 <br/>![](img/screenshot-1.png)
-<br/>![](img/screenshot-2.png)<br/>![](img/video.mp4)
+<br/>![](img/screenshot-2.png)
+<br/>![img/video.mp4](img/video.mp4)
