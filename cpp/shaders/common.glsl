@@ -10,6 +10,8 @@ precision highp float;
 #define PAR_5 2
 #define TYPE_COURSE 0
 #define TYPE_PARABOLA 1
+#define TYPE_PLAYER 2
+#define TYPE_FLAGPOLE 3
 
 #define HATCHET_X 20
 #define HATCHET_Y 12

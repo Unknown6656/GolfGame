@@ -16,7 +16,14 @@ vec4 main_parabola()
     const float x = 1 - pow(2 * (coords.x - .5), 2);
     const float y = PARABOLA_THICKNESS + coords.y / (1 - 2 * PARABOLA_THICKNESS);
 
-    return abs(x - y) <= .3 * PARABOLA_THICKNESS / u_parabola_height ? lerp(coords.x, vec4(.7, 0, 0, .3), vec4(1, 0, 0, .7)) : vec4(0);
+vec4 main_player()
+{
+    return vec4(coords, 0, 1);
+}
+
+vec4 main_flagpole()
+{
+    return vec4(coords, 1, 1);
 }
 
 vec4 main_course()

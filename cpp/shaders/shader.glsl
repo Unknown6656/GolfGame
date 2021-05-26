@@ -17,11 +17,14 @@
 
 uniform mat4 u_model;
 uniform mat4 u_parabola;
+uniform mat4 u_player;
+uniform mat4 u_flagpole;
 uniform float u_parabola_height;
 uniform mat4 u_view;
 uniform mat4 u_projection;
 uniform vec3 u_camera_position;
 uniform vec3 u_light_position;
+uniform float u_ball_position;
 
 uniform vec2 u_dimensions;
 

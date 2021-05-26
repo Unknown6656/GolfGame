@@ -24,6 +24,10 @@ void main()
         transf = u_model;
     else if (type == TYPE_PARABOLA)
         transf = u_parabola;
+    else if (type == TYPE_PLAYER)
+        transf = u_player;
+    else if (type == TYPE_FLAGPOLE)
+        transf = u_flagpole;
     else
         transf = mat4(1);
 
