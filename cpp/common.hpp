@@ -17,6 +17,7 @@
 #include <sstream>
 #include <fstream>
 #include <string>
+#include <thread>
 #include <regex>
 #include <cstdio>
 #include <windows.h>
@@ -68,7 +69,7 @@ inline float modpos(const float x, const float y) noexcept
 
 inline float map(const float x, const float from_min, const float from_max, const float to_min, const float to_max) noexcept
 {
-    return (x - from_min) / (to_min - from_min) * (to_max - from_max) + from_max;
+    return (x - from_min) / (from_max - from_min) * (to_max - to_min) + to_min;
 }
 
 inline glm::vec4 from_argb(const unsigned int argb)
