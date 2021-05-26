@@ -73,15 +73,12 @@ void main()
             ui_color = texture(u_texture_clubs, vec2((ui_pixel_coord.x + (club_size - 2) * u_selected_club) / u_texture_clubs_size.x * .5, ui_pixel_coord.y / club_size));
         else if (ui_pixel_coord.x > club_size + 2 && ui_pixel_coord.x < club_size + 30 && ui_pixel_coord.y < club_size)
         {
-            if (ui_pixel_coord.y * (1 - u_player_strength) < club_size)
+            if (ui_pixel_coord.y / club_size > 1 - u_player_strength)
                 ui_color = vec4(1 - u_player_strength, u_player_strength, 0, 1);
         }
         else
         {
-
             // TODO : more UI stuff like compass (?)
-            ui_color = vec4(1, 0, 1, 1);
-
         }
 
         gl_FragColor = mix(gl_FragColor, ui_color, ui_color.a);
