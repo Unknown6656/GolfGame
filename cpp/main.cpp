@@ -1,7 +1,6 @@
-#define GLEW_STATIC
+﻿#define GLEW_STATIC
 
 #include "main.hpp"
-
 
 #define _sleep(ms) std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
@@ -22,7 +21,7 @@ bool effects = true;
 float fov = 90.0f;
 float rotation_angle = 10.f;
 glm::vec3 light_position = glm::vec3(0.f, 3.f, -2.f);
-glm::vec3 camera_position = glm::vec3(0.f, 1.6f, 2.3f);
+glm::vec3 camera_position = glm::vec3(0.f, 1.5f, 2.5f);
 glm::mat4 parabola_transform = glm::mat4(1.f);
 glm::mat4 player_transform = glm::mat4(1.f);
 
@@ -41,6 +40,7 @@ glm::vec2 player_ball_target;
 glm::vec2 player_position;
 GolfClubType player_club;
 PlayerState player_state;
+SurfaceType surface_type;
 float player_orientation;
 float player_strength;
 float ball_position;
@@ -217,8 +217,16 @@ void gl_error(int error_code, const char* message)
     std::cout << "[GLFW Error] " << error_code << " | " << message << std::endl;
 }
 
-void update_parabola()
+void update_player()
 {
+    const int xpos = (int)roundf(player_position.x / rasterization_data.aspect_ratio * rasterization_data.surface.width);
+    const int ypos = (int)roundf(player_position.y * rasterization_data.surface.height);
+
+    if (xpos < 0 || ypos < 0 || xpos >= rasterization_data.surface.width || ypos >= rasterization_data.surface.height)
+        surface_type = SurfaceType::OutsideCourse;
+    else
+        surface_type = rasterization_data.surface.pixels[ypos * rasterization_data.surface.width + xpos];
+
     // https://danbubanygolf.com/club-fitting-variables-no-5-6-7/
     const float angle_of_attack = glm::radians(player_club == GolfClubType::Wood1 ? 10.f
                                              : player_club == GolfClubType::Wood2 ? 18.f
@@ -233,13 +241,30 @@ void update_parabola()
                                              : player_club == GolfClubType::SandWedge ? 54.f
                                              : player_club == GolfClubType::Putter ? .6f
                                              : 90.f);
-    float distance = player_strength * map(angle_of_attack, .943, .17, .25, 1.5);
+    const float dampening_surface = surface_type == SurfaceType::Rough ? .4f :
+                                    surface_type == SurfaceType::Fairway ? .2f :
+                                    surface_type == SurfaceType::OutsideCourse ? .5f :
+                                    surface_type == SurfaceType::Bunker ? .6f :
+                                    surface_type == SurfaceType::Water ? .8f : 0.f;
+    float dampening_club = 0.f;
+
+    if (surface_type >= SurfaceType::Fairway)
+        if (player_club == GolfClubType::Putter)
+            dampening_club = .5;
+        else
+        {
+            const int factor = ((int)GolfClubType::Iron6 - (int)player_club) * ((int)surface_type - (int)SurfaceType::Fairway);
+
+            dampening_club = (float)factor / 30.f;
+        }
+
+    float distance = player_strength * map(angle_of_attack, .943, .17, .25, 1.5) * (1.f - dampening_surface) * (1.f - dampening_club);
     const float height = tan(angle_of_attack) * distance * .25f;
     const float sinφ = sin(player_orientation);
     const float cosφ = cos(player_orientation);
 
     if (player_club == GolfClubType::Putter)
-        distance = player_strength * .12f;
+        distance *= .2f;
 
     parabola_transform = glm::mat4(
                                   distance * cosφ,    0.f,         distance * sinφ, 0.f,
@@ -364,8 +389,9 @@ int window_load(GLFWwindow* const window)
 
     /////////////////////////////////// SET UP MAIN GEOMETRY ///////////////////////////////////
 
-    course = new GolfCourse((Par)(rand() % 3), 2.5f, seed);
-    course->rasterize(20, 128, &rasterization_data);
+    const Par par = (Par)(rand() % 3);
+    course = new GolfCourse(par, 2.f + (int)par * 1.f, seed);
+    course->rasterize(20, 128, 3, &rasterization_data);
     player_position = course->_course_start_position.position;
 
     const int vertex_index_offs = rasterization_data.vertices.size();
@@ -455,9 +481,6 @@ int window_load(GLFWwindow* const window)
     img_player = new ImageTexture("assets/player.png", shader_main, "tex_player", 3);
 
     glBindTexture(GL_TEXTURE_2D, 0);
-
-    rasterization_data.surface.pixels.clear();
-    rasterization_data.surface.pixels.~vector();
 
 
     if (!font_main->SetUp(shader_font))
@@ -572,6 +595,12 @@ void window_unload(GLFWwindow* const)
     shader_main = nullptr;
     shader_post = nullptr;
     shader_font = nullptr;
+
+    if (rasterization_data.surface.pixels.size())
+    {
+        rasterization_data.surface.pixels.clear();
+        rasterization_data.surface.pixels.~vector();
+    }
 }
 
 inline void render_text_2D(GLFWwindow* const window, const std::string& text, const float x, const float y, const float size, const glm::vec4& color)
@@ -657,6 +686,7 @@ void window_render(GLFWwindow* const window, const float time)
     shader_post->set_float("u_time", time);
     shader_post->set_int("u_effects", effects);
     shader_post->set_int("u_animating", is_animating);
+    shader_post->set_int("u_has_won", has_won);
     shader_post->set_int("u_width", width);
     shader_post->set_int("u_height", height);
     shader_post->set_int("u_selected_club", (int)player_club);
@@ -685,7 +715,15 @@ void window_render(GLFWwindow* const window, const float time)
     else if (!is_animating)
     {
         render_text_2D(window, help_text, 10, height - 70, 1.3, from_argb(0xffbbbbbb));
-        render_text_2D(window, format("Strokes: %d", stroke_count), 140, 10, 2, from_argb(0xffff8888));
+        render_text_2D(window, format("Par: %d\nSurface: %s\nStrokes: %d",
+            (int)rasterization_data.par + 3,
+            surface_type <= SurfaceType::TeePoint ? "Tee" :
+            surface_type <= SurfaceType::PuttingHole ? "Green" :
+            surface_type <= SurfaceType::Fairway ? "Fairway" :
+            surface_type <= SurfaceType::Rough ? "Rough" :
+            surface_type <= SurfaceType::Bunker ? "Bunker" :
+            surface_type <= SurfaceType::Water ? "Water" : "Outside",
+            stroke_count), 140, 90, 2, from_argb(0xffff8888));
     }
 }
 
@@ -696,14 +734,37 @@ void window_process_input(GLFWwindow* const window, const float time)
     if (pressed(GLFW_KEY_ESCAPE))
         glfwSetWindowShouldClose(window, true);
 
+    if (!has_won)
+    {
+        if (pressed(GLFW_KEY_A))
+            camera_position.x -= CAMERA_SPEED;
+        else if (pressed(GLFW_KEY_D))
+            camera_position.x += CAMERA_SPEED;
+        if (pressed(GLFW_KEY_W))
+        {
+            camera_position.y -= CAMERA_SPEED * .5;
+            camera_position.z -= CAMERA_SPEED;
+        }
+        else if (pressed(GLFW_KEY_S))
+        {
+            camera_position.y += CAMERA_SPEED * .5;
+            camera_position.z += CAMERA_SPEED;
+        }
+        if (pressed(GLFW_KEY_R))
+            fov += CAMERA_SPEED * 12;
+        else if (pressed(GLFW_KEY_E))
+            fov -= CAMERA_SPEED * 12;
+    }
+
     if (is_animating)
     {
         if (has_won && pressed(GLFW_KEY_SPACE))
         {
             is_animating = false;
             has_won = false;
-            seed += 7;
+            seed ^= rand() & 0xffffff;
 
+            reset_player();
             window_unload(window);
             window_load(window);
             glfwPollEvents();
@@ -725,49 +786,30 @@ void window_process_input(GLFWwindow* const window, const float time)
         return;
     }
 
-    if (pressed(GLFW_KEY_F1))
-    {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glLineWidth(1);
-        glPointSize(1);
-    }
-    else if (pressed(GLFW_KEY_F2))
-    {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glLineWidth(2.5f);
-        glPointSize(1);
-    }
-    else if (pressed(GLFW_KEY_F3))
-    {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-        glLineWidth(1);
-        glPointSize(3.5f);
-    }
+    //if (pressed(GLFW_KEY_F1))
+    //{
+    //    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    //    glLineWidth(1);
+    //    glPointSize(1);
+    //}
+    //else if (pressed(GLFW_KEY_F2))
+    //{
+    //    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    //    glLineWidth(2.5f);
+    //    glPointSize(1);
+    //}
+    //else if (pressed(GLFW_KEY_F3))
+    //{
+    //    glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+    //    glLineWidth(1);
+    //    glPointSize(3.5f);
+    //}
 
     if (pressed(GLFW_KEY_F4))
     {
         _sleep(120);
         effects ^= true;
     }
-
-    if (pressed(GLFW_KEY_A))
-        camera_position.x -= CAMERA_SPEED;
-    else if (pressed(GLFW_KEY_D))
-        camera_position.x += CAMERA_SPEED;
-    if (pressed(GLFW_KEY_W))
-    {
-        camera_position.y -= CAMERA_SPEED * .5;
-        camera_position.z -= CAMERA_SPEED;
-    }
-    else if (pressed(GLFW_KEY_S))
-    {
-        camera_position.y += CAMERA_SPEED * .5;
-        camera_position.z += CAMERA_SPEED;
-    }
-    if (pressed(GLFW_KEY_R))
-        fov += CAMERA_SPEED * 12;
-    else if (pressed(GLFW_KEY_E))
-        fov -= CAMERA_SPEED * 12;
 
     if (pressed(GLFW_KEY_T))
         reset_player();
@@ -802,9 +844,9 @@ void window_process_input(GLFWwindow* const window, const float time)
     fov = glm::clamp(fov, 60.f, 100.f);
     player_orientation = modpos(player_orientation, 2 * M_PI);
     player_strength = glm::clamp(player_strength, .3f, 1.f);
-    camera_position = glm::clamp(camera_position, glm::vec3(-2.f, .6f, .3f), glm::vec3(2.f, 1.6f, 2.3f));
+    camera_position = glm::clamp(camera_position, glm::vec3(-3.f, .4f, .3f), glm::vec3(3.f, 1.9f, 3.3f));
 
-    update_parabola();
+    update_player();
 
 #undef pressed
 }
