@@ -12,6 +12,7 @@ precision highp float;
 #define TYPE_PARABOLA 1
 #define TYPE_PLAYER 2
 #define TYPE_FLAGPOLE 3
+#define TYPE_TREE 4
 
 #define HATCHET_X 20
 #define HATCHET_Y 12

@@ -36,6 +36,13 @@ vec4 main_player()
     return texture2D(tex_player, texture_coords);
 }
 
+vec4 main_tree()
+{
+// TODO : render trees
+
+    return vec4(hue2rgb(atan(pos_model.z, pos_model.x)), 1);
+}
+
 vec4 main_course()
 {
     const int type = int(texture2D(tex_surface, coords).x * 255);
@@ -109,6 +116,8 @@ void main()
         gl_FragColor = main_parabola();
     else if (type == TYPE_PLAYER)
         gl_FragColor = main_player();
+    else if (type == TYPE_TREE)
+        gl_FragColor = main_tree();
     else if (type == TYPE_FLAGPOLE)
         gl_FragColor = texture2D(tex_flagpole, coords);
     else

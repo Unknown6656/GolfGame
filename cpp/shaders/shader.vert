@@ -20,7 +20,7 @@ void main()
 
     mat4 transf;
 
-    if (type == TYPE_COURSE)
+    if (type == TYPE_COURSE || type == TYPE_TREE)
         transf = u_model;
     else if (type == TYPE_PARABOLA)
         transf = u_parabola;
