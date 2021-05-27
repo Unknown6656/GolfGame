@@ -28,7 +28,12 @@ vec4 main_parabola()
 
 vec4 main_player()
 {
-    return texture2D(tex_player, (coords + vec2(u_player_state, 0)) * vec2(tex_player_size.y / tex_player_size.x, 1));
+    vec2 texture_coords = (coords + vec2(u_player_state, 0)) * vec2(tex_player_size.y / tex_player_size.x, 1);
+
+    if (u_player_state == PLAYER_STATE_WAITING)
+        texture_coords.y = mix(texture_coords.y, .5 * (1 - pow(1 - 2 * texture_coords.y, 3)), sin(u_time * 2) * .1);
+
+    return texture2D(tex_player, texture_coords);
 }
 
 vec4 main_course()
