@@ -1,4 +1,4 @@
-﻿#define GLEW_STATIC
+#define GLEW_STATIC
 
 #include "main.hpp"
 
@@ -364,7 +364,7 @@ int window_load(GLFWwindow* const window)
 
     /////////////////////////////////// SET UP MAIN GEOMETRY ///////////////////////////////////
 
-    course = new GolfCourse(Par::Par4, 2.5f, seed);
+    course = new GolfCourse((Par)(rand() % 3), 2.5f, seed);
     course->rasterize(20, 128, &rasterization_data);
     player_position = course->_course_start_position.position;
 
