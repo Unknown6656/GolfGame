@@ -16,6 +16,7 @@ enum class VertexType
     Parabola = 1,
     Player = 2,
     Flagpole = 3,
+    Tree = 4,
 };
 
 struct VertexData
@@ -200,7 +201,7 @@ struct GolfCourse
 
             _course_midway_points = { mid };
         }
-        else if (par == Par::Par4)
+        else if (par == Par::Par5)
         {
             const float mid_dev_1 = randf(.5f) + .25f;
             const float mid_dev_2 = randf(.5f) + .25f;
@@ -222,9 +223,9 @@ struct GolfCourse
         _fairway_start_position = (1 - fsp) * _course_start_position.position + fsp * (par == Par::Par3 ? _course_putting_green.position : _course_midway_points[0]);
     }
 
-    void rasterize(const int subdivisions, const int texture_height, RasterizationData* const data) const
+    void rasterize(const int subdivisions, const int texture_height, const int tree_rows, RasterizationData* const data) const
     {
-#define RADIUS 2.5f
+#define RADIUS 4.f
 
         const int size_y = std::max(1, subdivisions);
         const int size_x = size_y * _length;
@@ -235,8 +236,8 @@ struct GolfCourse
         *data = RasterizationData();
         data->aspect_ratio = ratio;
         data->dimensions = glm::vec2(ratio, 1.f);
-        data->vertices = std::vector<VertexData>(inner_count + edge_count);
-        data->indices = std::vector<int>(6 * size_x * size_y + 6 * edge_count);
+        data->vertices = std::vector<VertexData>(inner_count + (1 + 2 * tree_rows) * edge_count);
+        data->indices = std::vector<int>(6 * size_x * size_y + (1 + tree_rows) * 6 * edge_count);
         data->par = _par;
         data->tee = _course_start_position;
         data->start = _fairway_start_position;
@@ -326,6 +327,38 @@ struct GolfCourse
             data->indices[base_index + 3] = outer_index_1;
             data->indices[base_index + 4] = outer_index_2;
             data->indices[base_index + 5] = inner_index_2;
+
+
+            for (int tree_row = 0; tree_row < tree_rows; ++tree_row)
+            {
+                const int tree_index_bottom = inner_count + edge_count * (1 + tree_row * 2) + i;
+                const int tree_index_top = inner_count + edge_count * (2 + tree_row * 2) + i;
+                const int next_tree_bottom = inner_count + edge_count * (1 + tree_row * 2) + (i + 1) % edge_count;
+                const int next_tree_top = inner_count + edge_count * (2 + tree_row * 2) + (i + 1) % edge_count;
+                const int tree_base_index = 6 * (size_x * size_y + edge_count * (1 + tree_row) + i);
+                glm::vec2 tree_position = glm::normalize(edge_mid - center) * 2.5f;
+
+                tree_position.x *= ratio * .5f;
+                tree_position *= (1 - .3f * tree_row / (float)tree_rows);
+                tree_position += center;
+
+                data->vertices[tree_index_bottom].position = glm::vec3(tree_position.x, 0, tree_position.y);
+                data->vertices[tree_index_bottom].type = VertexType::Tree;
+                data->vertices[tree_index_top].position = glm::vec3(tree_position.x, .7f - .4f * tree_row / (float)tree_rows, tree_position.y);
+                data->vertices[tree_index_top].type = VertexType::Tree;
+
+                if (tree_position.y > .3f)
+                    data->vertices[tree_index_top].position.y *= std::max(.2f, 1.12f - .4f * tree_position.y);
+
+                // triangle 1
+                data->indices[tree_base_index + 0] = tree_index_top;
+                data->indices[tree_base_index + 1] = next_tree_top;
+                data->indices[tree_base_index + 2] = tree_index_bottom;
+                // triangle 2
+                data->indices[tree_base_index + 3] = next_tree_top;
+                data->indices[tree_base_index + 4] = next_tree_bottom;
+                data->indices[tree_base_index + 5] = tree_index_bottom;
+            }
         }
 
         for (VertexData& vertex : data->vertices)
