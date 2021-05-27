@@ -8,6 +8,7 @@ Shader* shader_main = nullptr;
 Shader* shader_post = nullptr;
 Shader* shader_font = nullptr;
 ImageTexture* img_clubs = nullptr;
+ImageTexture* img_flagpole = nullptr;
 unsigned int FBO, RBO, TEX; // framebuffer, renderbuffer, and texturebuffer
 unsigned int VBO_golf, VAO_golf, EBO_golf; // golf course geometry
 unsigned int VBO_quad, VAO_quad; // post-processing quad
@@ -295,6 +296,12 @@ int window_load(GLFWwindow* const window)
     else
         shader_main->use();
 
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+
+
+    /////////////////////////////////// SET UP MAIN GEOMETRY ///////////////////////////////////
+
     course = new GolfCourse(Par::Par4, 2.5f, seed);
     course->rasterize(20, 128, &rasterization_data);
     player_position = course->_course_start_position.position;
@@ -306,14 +313,14 @@ int window_load(GLFWwindow* const window)
         VertexData(glm::vec3(0, 1, 0), glm::vec2(0, 1), VertexType::Parabola),
         VertexData(glm::vec3(1, 1, 0), glm::vec2(1, 1), VertexType::Parabola),
         VertexData(glm::vec3(1, 0, 0), glm::vec2(1, 0), VertexType::Parabola),
-        VertexData(glm::vec3(0, 0, 0), glm::vec2(0, 0), VertexType::Player),
-        VertexData(glm::vec3(0, 1, 0), glm::vec2(0, 1), VertexType::Player),
-        VertexData(glm::vec3(1, 1, 0), glm::vec2(1, 1), VertexType::Player),
-        VertexData(glm::vec3(1, 0, 0), glm::vec2(1, 0), VertexType::Player),
-        VertexData(glm::vec3(0, 0, 0), glm::vec2(0, 0), VertexType::Flagpole),
-        VertexData(glm::vec3(0, 1, 0), glm::vec2(0, 1), VertexType::Flagpole),
-        VertexData(glm::vec3(1, 1, 0), glm::vec2(1, 1), VertexType::Flagpole),
-        VertexData(glm::vec3(1, 0, 0), glm::vec2(1, 0), VertexType::Flagpole),
+        VertexData(glm::vec3(0, 0, 0), glm::vec2(0, 1), VertexType::Player),
+        VertexData(glm::vec3(0, 1, 0), glm::vec2(0, 0), VertexType::Player),
+        VertexData(glm::vec3(1, 1, 0), glm::vec2(1, 0), VertexType::Player),
+        VertexData(glm::vec3(1, 0, 0), glm::vec2(1, 1), VertexType::Player),
+        VertexData(glm::vec3(0, 0, 0), glm::vec2(0, 1), VertexType::Flagpole),
+        VertexData(glm::vec3(0, .3, 0), glm::vec2(0, 0), VertexType::Flagpole),
+        VertexData(glm::vec3(.1, .3, 0), glm::vec2(1, 0), VertexType::Flagpole),
+        VertexData(glm::vec3(.1, 0, 0), glm::vec2(1, 1), VertexType::Flagpole),
     };
     const std::vector<int> indices =
     {
@@ -378,6 +385,7 @@ int window_load(GLFWwindow* const window)
     shader_main->set_vec4("u_colors.water", color_water);
     shader_main->set_vec4("u_colors.sun", color_sun);
     shader_main->set_vec2("u_dimensions", rasterization_data.dimensions);
+    img_flagpole = new ImageTexture("assets/flagpole.png", shader_main, "tex_flagpole", 2);
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -455,8 +463,6 @@ int window_load(GLFWwindow* const window)
 #else
     glBindTexture(GL_TEXTURE_2D, 0);
 #endif
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     return 0;
 }
@@ -486,12 +492,14 @@ void window_unload(GLFWwindow* const)
 
     delete course;
     delete img_clubs;
+    delete img_flagpole;
     delete shader_main;
     delete shader_post;
     delete shader_font;
 
     course = nullptr;
     img_clubs = nullptr;
+    img_flagpole = nullptr;
     shader_main = nullptr;
     shader_post = nullptr;
     shader_font = nullptr;
@@ -536,18 +544,28 @@ void window_render(GLFWwindow* const window, const float time)
     );
     const glm::mat4 proj = glm::perspective(glm::radians(fov / 2), (float)width / (float)height, F_NEAR, F_FAR);
 
+    const glm::vec2 flagpole_pos = rasterization_data.end.position - .5f * rasterization_data.dimensions;
+    const float flagpole_angle = atan2f(flagpole_pos.y - camera_position.z, flagpole_pos.x - camera_position.x);
+    const glm::mat4 flagpole(
+        -sin(flagpole_angle), 0.f,  cos(flagpole_angle), 0.f,
+                         0.f, 1.f,                  0.f, 0.f,
+        -cos(flagpole_angle), 0.f, -sin(flagpole_angle), 0.f,
+              flagpole_pos.x, 0.f,       flagpole_pos.y, 1.f
+    );
+
     shader_main->use();
     shader_main->set_float("u_time", time);
     shader_main->set_int("u_effects", effects);
     shader_main->set_mat4("u_model", model);
     shader_main->set_mat4("u_parabola", parabola_transform);
     //shader_main->set_mat4("u_player", );
-    //shader_main->set_mat4("u_flagpole", );
+    shader_main->set_mat4("u_flagpole", flagpole);
     shader_main->set_mat4("u_view", view);
     shader_main->set_mat4("u_projection", proj);
     shader_main->set_vec3("u_camera_position", camera_position);
     shader_main->set_vec3("u_light_position", light_position);
     shader_main->set_float("u_ball_position", ball_position);
+    img_flagpole->bind();
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, TEX_surface);
