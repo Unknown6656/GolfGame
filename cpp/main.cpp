@@ -1,4 +1,4 @@
-#define GLEW_STATIC
+﻿#define GLEW_STATIC
 
 #include "main.hpp"
 
@@ -24,6 +24,7 @@ float rotation_angle = 10.f;
 glm::vec3 light_position = glm::vec3(0.f, 3.f, -2.f);
 glm::vec3 camera_position = glm::vec3(0.f, 1.6f, 2.3f);
 glm::mat4 parabola_transform = glm::mat4(1.f);
+glm::mat4 player_transform = glm::mat4(1.f);
 
 glm::vec4 color_outside_bounds = from_argb(0xFF043925);
 glm::vec4 color_rough = from_argb(0xFF025A34);
@@ -43,6 +44,8 @@ PlayerState player_state;
 float player_orientation;
 float player_strength;
 float ball_position;
+volatile int stroke_count;
+volatile bool has_won;
 volatile bool is_animating;
 
 Font* font_main = nullptr;
@@ -54,8 +57,8 @@ constexpr const char help_text[] = R"(Keyboard bindings:
 [E] [R]           Zoom in or out
 [LEFT] [RIGHT]    Turn the player
 [C] [V]           Switch golf clubs
-[F] [G]           Change player/swing strength
-[ENTER]           Play / execute swing
+[F] [G]           Change strike strength
+[ENTER]           Play / strike ball
 [T]               Reset player
 [ESCAPE]          Quit game
 [F4]              Enable/Disable visual effects
@@ -245,6 +248,13 @@ void update_parabola()
         player_position.x - course->_length * .5f,    0.f, player_position.y - .5f, 1.f
     );
 
+    player_transform = glm::mat4(
+        cosφ, 0.f, sinφ, 0.f,
+        0.f, 1.f, 0.f, 0.f,
+        -sinφ, 0.f, cosφ, 0.f,
+        player_position.x - course->_length * .5f, 0.f, player_position.y - .5f, 1.f
+    );
+
     const float target_distance = distance + randf() * .1f;
     const float target_angle = player_orientation + randf() * .1f;
 
@@ -260,24 +270,72 @@ void animate_ball()
     if (!is_animating)
     {
         is_animating = true;
+        player_state = PlayerState::Waiting;
 
         std::thread([&]()
             {
-                constexpr int TOTAL_MS = 700;
-                const float t_start = glfwGetTime();
+                while (player_state <= PlayerState::Swing7)
+                {
+                    _sleep(70);
+
+                    ++*(int*)&player_state;
+                }
+
+                float t_start = glfwGetTime();
 
                 ball_position = 0;
 
                 while (ball_position < 1)
                 {
-                    _sleep(1);
+                    const float time_diff = (glfwGetTime() - t_start) * 1000.f;
 
-                    ball_position = (glfwGetTime() - t_start) * 1000.f / TOTAL_MS;
+                    if (time_diff > 70)
+                        player_state = PlayerState::Swing8;
+
+                    //_sleep(1);
+
+                    ball_position = time_diff / BALL_ANIM_DURATION;
                 }
 
-                ball_position = -1;
-                is_animating = false;
+                const glm::vec2 orig_pos = player_position;
+                float player_walk_position = 0.f;
+
+                player_state = PlayerState::Swing8;
+                ball_position = 1;
+
+                _sleep(200);
+
+                t_start = glfwGetTime();
+
+                const float walk_duration = glm::distance(player_ball_target, orig_pos) * WALK_ANIM_DURATION;
+                const float sinφ = sin(player_orientation);
+                const float cosφ = cos(player_orientation);
+                float time_diff = 0;
+
+                while (time_diff < walk_duration)
+                {
+                    time_diff = (glfwGetTime() - t_start) * 1000.f;
+                    player_position = lerp(orig_pos, player_ball_target, time_diff / walk_duration);
+                    player_transform = glm::mat4(
+                        cosφ, 0.f, sinφ, 0.f,
+                        0.f, 1.f, 0.f, 0.f,
+                        -sinφ, 0.f, cosφ, 0.f,
+                        player_position.x - course->_length * .5f, 0.f, player_position.y - .5f, 1.f
+                    );
+
+                    const float state = (1 + sin(time_diff * .02)) * .5;
+
+                    player_state = state <= .25 ? PlayerState::Walking1 : state >= .75 ? PlayerState::Walking3 : PlayerState::Walking2;
+                }
+
+                player_state = PlayerState::Waiting;
                 player_position = player_ball_target;
+                ball_position = -1;
+
+                if (glm::distance(player_position, rasterization_data.end.position) <= rasterization_data.end.point_size)
+                    has_won = true;
+                else
+                    is_animating = false;
             }).detach();
     }
 }
@@ -317,14 +375,14 @@ int window_load(GLFWwindow* const window)
         VertexData(glm::vec3(0, 1, 0), glm::vec2(0, 1), VertexType::Parabola),
         VertexData(glm::vec3(1, 1, 0), glm::vec2(1, 1), VertexType::Parabola),
         VertexData(glm::vec3(1, 0, 0), glm::vec2(1, 0), VertexType::Parabola),
-        VertexData(glm::vec3(0, 0, 0), glm::vec2(0, 1), VertexType::Player),
-        VertexData(glm::vec3(0, 1, 0), glm::vec2(0, 0), VertexType::Player),
-        VertexData(glm::vec3(1, 1, 0), glm::vec2(1, 0), VertexType::Player),
-        VertexData(glm::vec3(1, 0, 0), glm::vec2(1, 1), VertexType::Player),
+        VertexData(glm::vec3(-.5f * PLAYER_SIZE, 0, 0), glm::vec2(0, 1), VertexType::Player),
+        VertexData(glm::vec3(-.5f * PLAYER_SIZE, PLAYER_SIZE, 0), glm::vec2(0, 0), VertexType::Player),
+        VertexData(glm::vec3(.5f * PLAYER_SIZE, PLAYER_SIZE, 0), glm::vec2(1, 0), VertexType::Player),
+        VertexData(glm::vec3(.5f * PLAYER_SIZE, 0, 0), glm::vec2(1, 1), VertexType::Player),
         VertexData(glm::vec3(0, 0, 0), glm::vec2(0, 1), VertexType::Flagpole),
-        VertexData(glm::vec3(0, .3, 0), glm::vec2(0, 0), VertexType::Flagpole),
-        VertexData(glm::vec3(.1, .3, 0), glm::vec2(1, 0), VertexType::Flagpole),
-        VertexData(glm::vec3(.1, 0, 0), glm::vec2(1, 1), VertexType::Flagpole),
+        VertexData(glm::vec3(0, .24, 0), glm::vec2(0, 0), VertexType::Flagpole),
+        VertexData(glm::vec3(.08, .24, 0), glm::vec2(1, 0), VertexType::Flagpole),
+        VertexData(glm::vec3(.08, 0, 0), glm::vec2(1, 1), VertexType::Flagpole),
     };
     const std::vector<int> indices =
     {
@@ -543,7 +601,7 @@ void window_render(GLFWwindow* const window, const float time)
     glClearColor(.2f, .3f, .3f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    const glm::vec3 look_at = glm::vec3((parabola_transform * glm::vec4(0.f, 0.f, 0.f, 1.f)).xyz * .5f);
+    const glm::vec3 look_at = glm::vec3((player_transform * glm::vec4(0.f, 0.f, 0.f, 1.f)).xyz * .75f);
     const glm::mat4 model = glm::translate(
         glm::mat4(1.f),
         glm::vec3(-.5f * rasterization_data.dimensions.x, 0.f, -.5f * rasterization_data.dimensions.y)
@@ -563,15 +621,15 @@ void window_render(GLFWwindow* const window, const float time)
         -cos(flagpole_angle), 0.f, -sin(flagpole_angle), 0.f,
               flagpole_pos.x, 0.f,       flagpole_pos.y, 1.f
     );
-    const glm::mat4 player = glm::mat4(1.f);
 
 
     shader_main->use();
     shader_main->set_float("u_time", time);
     shader_main->set_int("u_effects", effects);
+    shader_main->set_int("u_animating", is_animating);
     shader_main->set_mat4("u_model", model);
     shader_main->set_mat4("u_parabola", parabola_transform);
-    shader_main->set_mat4("u_player", player);
+    shader_main->set_mat4("u_player", player_transform);
     shader_main->set_int("u_player_state", (int)player_state);
     shader_main->set_mat4("u_flagpole", flagpole);
     shader_main->set_mat4("u_view", view);
@@ -594,9 +652,10 @@ void window_render(GLFWwindow* const window, const float time)
 
     shader_post->use();
     shader_post->set_float("u_time", time);
+    shader_post->set_int("u_effects", effects);
+    shader_post->set_int("u_animating", is_animating);
     shader_post->set_int("u_width", width);
     shader_post->set_int("u_height", height);
-    shader_post->set_int("u_effects", effects);
     shader_post->set_int("u_selected_club", (int)player_club);
     shader_post->set_float("u_player_strength", player_strength);
     img_clubs->bind();
@@ -615,11 +674,16 @@ void window_render(GLFWwindow* const window, const float time)
     glBindTexture(GL_TEXTURE_2D, 0);
 #endif
 
-    constexpr const char* lol[12] = { "?", "D", "W2", "I3", "I4", "I5", "I6", "I7", "I8", "I9", "P", "W" };
-
-    if (!is_animating)
+    if (has_won)
+    {
+        render_text_2D(window, format("  Congratulations! You\nfinished with %d strokes!", stroke_count), width / 2 - 500, height / 2 - 50, 4, from_argb(0xffffffff));
+        render_text_2D(window, "Press [SPACE] to continue ...", width / 2 - 300, height / 2 - 200, 2, from_argb(0xffffffff));
+    }
+    else if (!is_animating)
+    {
         render_text_2D(window, help_text, 10, height - 70, 1.3, from_argb(0xffbbbbbb));
-    //render_text_2D(window, format("club: %s, pos: %f|%f, or: %f, st: %f", lol[(int)player_club], player_position.x, player_position.y, player_orientation, player_strength), 10, 10, 1.5, from_argb(0xffff8888));
+        render_text_2D(window, format("Strokes: %d", stroke_count), 140, 10, 2, from_argb(0xffff8888));
+    }
 }
 
 void window_process_input(GLFWwindow* const window, const float time)
@@ -630,7 +694,20 @@ void window_process_input(GLFWwindow* const window, const float time)
         glfwSetWindowShouldClose(window, true);
 
     if (is_animating)
+    {
+        if (has_won && pressed(GLFW_KEY_SPACE))
+        {
+            is_animating = false;
+            has_won = false;
+            seed += 7;
+
+            window_unload(window);
+            window_load(window);
+            glfwPollEvents();
+        }
+
         return;
+    }
 
     if (pressed(GLFW_KEY_F9))
     {
@@ -672,33 +749,33 @@ void window_process_input(GLFWwindow* const window, const float time)
 
     if (pressed(GLFW_KEY_A))
         camera_position.x -= CAMERA_SPEED;
-    if (pressed(GLFW_KEY_D))
+    else if (pressed(GLFW_KEY_D))
         camera_position.x += CAMERA_SPEED;
     if (pressed(GLFW_KEY_W))
     {
         camera_position.y -= CAMERA_SPEED * .5;
         camera_position.z -= CAMERA_SPEED;
     }
-    if (pressed(GLFW_KEY_S))
+    else if (pressed(GLFW_KEY_S))
     {
         camera_position.y += CAMERA_SPEED * .5;
         camera_position.z += CAMERA_SPEED;
     }
     if (pressed(GLFW_KEY_R))
         fov += CAMERA_SPEED * 12;
-    if (pressed(GLFW_KEY_E))
+    else if (pressed(GLFW_KEY_E))
         fov -= CAMERA_SPEED * 12;
 
     if (pressed(GLFW_KEY_T))
         reset_player();
     if (pressed(GLFW_KEY_RIGHT))
         player_orientation -= ROTATION_SPEED;
-    if (pressed(GLFW_KEY_LEFT))
+    else if (pressed(GLFW_KEY_LEFT))
         player_orientation += ROTATION_SPEED;
 
     if (pressed(GLFW_KEY_F))
         player_strength -= STRENGTH_SPEED;
-    if (pressed(GLFW_KEY_G))
+    else if (pressed(GLFW_KEY_G))
         player_strength += STRENGTH_SPEED;
 
     if (pressed(GLFW_KEY_C) && player_club > GolfClubType::Wood1)
@@ -706,14 +783,18 @@ void window_process_input(GLFWwindow* const window, const float time)
         _sleep(120);
         --*(int*)&player_club;
     }
-    if (pressed(GLFW_KEY_V) && player_club < GolfClubType::Putter)
+    else if (pressed(GLFW_KEY_V) && player_club < GolfClubType::Putter)
     {
         _sleep(120);
         ++*(int*)&player_club;
     }
 
     if (pressed(GLFW_KEY_ENTER))
+    {
         animate_ball();
+
+        ++stroke_count;
+    }
 
     fov = glm::clamp(fov, 60.f, 100.f);
     player_orientation = modpos(player_orientation, 2 * M_PI);
@@ -731,7 +812,9 @@ void reset_player()
     player_orientation = 0;
     player_club = GolfClubType::Driver;
     player_state = PlayerState::Waiting;
+    stroke_count = 0;
     player_strength = 1;
     ball_position = -1;
     is_animating = false;
+    has_won = false;
 }
