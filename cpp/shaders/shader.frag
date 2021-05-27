@@ -107,4 +107,6 @@ void main()
     else
         gl_FragColor = vec4(1, 0, 1, 1);
 
+    if (gl_FragColor.a < .05)
+        discard;
 }
