@@ -592,6 +592,9 @@ inline void render_text_3D(const std::string& text, glm::mat4 camera, const floa
 
 void window_render(GLFWwindow* const window, const float time)
 {
+    if (glfwGetWindowAttrib(window, GLFW_ICONIFIED))
+        return;
+
     int width, height;
 
     glfwGetWindowSize(window, &width, &height);
