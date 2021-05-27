@@ -116,6 +116,7 @@
     <ClInclude Include="font.hpp" />
     <ClInclude Include="game.hpp" />
     <ClInclude Include="main.hpp" />
+    <ClInclude Include="patterns.hpp" />
     <ClInclude Include="shader.hpp" />
     <ClInclude Include="stb_image.hpp" />
   </ItemGroup>
