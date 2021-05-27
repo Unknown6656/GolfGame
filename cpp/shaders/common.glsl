@@ -30,7 +30,7 @@ precision highp float;
 
 uniform float u_time;
 uniform int u_effects;
-
+uniform int u_animating;
 
 
 float random(in vec2 position)
