@@ -29,6 +29,8 @@ uniform float u_ball_position;
 uniform vec2 u_dimensions;
 
 uniform sampler2D tex_surface;
+uniform sampler2D tex_flagpole;
+uniform vec2 tex_flagpole_size;
 
 uniform struct {
     vec4 outside_bounds;
