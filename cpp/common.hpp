@@ -1,7 +1,7 @@
 #pragma once
 
 #define _USE_MATH_DEFINES
-#define GLM_SWIZZLE
+#define GLM_FORCE_SWIZZLE
 #define GLEW_STATIC
 
 #define VERSION_MAJ 4
@@ -45,6 +45,8 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.hpp"
+
+// #include "patterns.hpp"
 
 
 #define nameof(name) #name
