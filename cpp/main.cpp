@@ -8,6 +8,7 @@ Shader* shader_main = nullptr;
 Shader* shader_post = nullptr;
 Shader* shader_font = nullptr;
 ImageTexture* img_clubs = nullptr;
+ImageTexture* img_player = nullptr;
 ImageTexture* img_flagpole = nullptr;
 unsigned int FBO, RBO, TEX; // framebuffer, renderbuffer, and texturebuffer
 unsigned int VBO_golf, VAO_golf, EBO_golf; // golf course geometry
@@ -386,6 +387,7 @@ int window_load(GLFWwindow* const window)
     shader_main->set_vec4("u_colors.sun", color_sun);
     shader_main->set_vec2("u_dimensions", rasterization_data.dimensions);
     img_flagpole = new ImageTexture("assets/flagpole.png", shader_main, "tex_flagpole", 2);
+    img_player = new ImageTexture("assets/player.png", shader_main, "tex_player", 3);
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -492,6 +494,7 @@ void window_unload(GLFWwindow* const)
 
     delete course;
     delete img_clubs;
+    delete img_player;
     delete img_flagpole;
     delete shader_main;
     delete shader_post;
@@ -499,6 +502,7 @@ void window_unload(GLFWwindow* const)
 
     course = nullptr;
     img_clubs = nullptr;
+    img_player = nullptr;
     img_flagpole = nullptr;
     shader_main = nullptr;
     shader_post = nullptr;
@@ -552,13 +556,15 @@ void window_render(GLFWwindow* const window, const float time)
         -cos(flagpole_angle), 0.f, -sin(flagpole_angle), 0.f,
               flagpole_pos.x, 0.f,       flagpole_pos.y, 1.f
     );
+    const glm::mat4 player = glm::mat4(1.f);
+
 
     shader_main->use();
     shader_main->set_float("u_time", time);
     shader_main->set_int("u_effects", effects);
     shader_main->set_mat4("u_model", model);
     shader_main->set_mat4("u_parabola", parabola_transform);
-    //shader_main->set_mat4("u_player", );
+    shader_main->set_mat4("u_player", player);
     shader_main->set_mat4("u_flagpole", flagpole);
     shader_main->set_mat4("u_view", view);
     shader_main->set_mat4("u_projection", proj);
@@ -566,6 +572,7 @@ void window_render(GLFWwindow* const window, const float time)
     shader_main->set_vec3("u_light_position", light_position);
     shader_main->set_float("u_ball_position", ball_position);
     img_flagpole->bind();
+    img_player->bind();
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, TEX_surface);
