@@ -1,4 +1,4 @@
-﻿#define GLEW_STATIC
+#define GLEW_STATIC
 
 #include "main.hpp"
 
@@ -399,9 +399,9 @@ int window_load(GLFWwindow* const window)
         return -1;
 
     /////////////////////////////////// SET UP POST-PROCESSING SHADER ///////////////////////////////////
-    img_clubs = new ImageTexture("assets/clubs.png", shader_post, "u_texture_clubs", 2);
+    img_clubs = new ImageTexture("assets/clubs.png", shader_post, "tex_clubs", 2);
     shader_post->use();
-    shader_post->set_int("u_texture_screen", 0);
+    shader_post->set_int("tex_screen", 0);
     shader_post->set_float("u_pixelation_factor", PIXELATION_FACTOR);
 
     const int screen_position = shader_post->get_attrib(nameof(screen_position));

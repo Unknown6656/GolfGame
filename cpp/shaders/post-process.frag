@@ -8,9 +8,9 @@
 #define UI_HEIGHT 98
 
 
-uniform sampler2D u_texture_screen;
-uniform sampler2D u_texture_clubs;
-uniform vec2 u_texture_clubs_size;
+uniform sampler2D tex_screen;
+uniform sampler2D tex_clubs;
+uniform vec2 tex_clubs_size;
 
 uniform float u_pixelation_factor;
 uniform int u_width;
@@ -29,7 +29,7 @@ vec4 fetch_pixelated(vec2 offs)
     const vec2 d = u_pixelation_factor / vec2(u_width, u_height);
     const vec2 coord = d * floor(tex_coords / d) + offs;
 
-    return texture(u_texture_screen, coord);
+    return texture(tex_screen, coord);
 }
 
 void main()
@@ -37,7 +37,7 @@ void main()
     const ivec2 pixel_coord = ivec2(tex_coords.x * u_width, (1 - tex_coords.y) * u_height);
 
     if (u_effects == 0)
-        gl_FragColor = texture(u_texture_screen, tex_coords);
+        gl_FragColor = texture(tex_screen, tex_coords);
     else
     {
         vec2 rgb_offs = vec2(sin(cos(u_time * .1)) * 4 / u_width, 0);
@@ -67,10 +67,10 @@ void main()
         const ivec2 ui_pixel_coord = ivec2(pixel_coord.x - UI_LEFT, pixel_coord.y - u_height + UI_BOTTOM + UI_HEIGHT);
         vec4 ui_color;
 
-        const float club_size = (u_texture_clubs_size.y + 1) * 2;
+        const float club_size = (tex_clubs_size.y + 1) * 2;
 
         if (ui_pixel_coord.x < club_size && ui_pixel_coord.y < club_size)
-            ui_color = texture(u_texture_clubs, vec2((ui_pixel_coord.x + (club_size - 2) * u_selected_club) / u_texture_clubs_size.x * .5, ui_pixel_coord.y / club_size));
+            ui_color = texture(tex_clubs, vec2((ui_pixel_coord.x + (club_size - 2) * u_selected_club) / tex_clubs_size.x * .5, ui_pixel_coord.y / club_size));
         else if (ui_pixel_coord.x > club_size + 2 && ui_pixel_coord.x < club_size + 30 && ui_pixel_coord.y < club_size)
         {
             if (ui_pixel_coord.y / club_size > 1 - u_player_strength)
