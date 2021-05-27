@@ -166,6 +166,9 @@
     <Image Include="assets\flagpole.png">
       <DeploymentContent>true</DeploymentContent>
     </Image>
+    <Image Include="assets\player.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
   </ItemGroup>
   <!--
   <ItemGroup>
