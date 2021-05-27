@@ -20,7 +20,7 @@ vec4 main_parabola()
 
     if (ball_dist <= PARABOLA_THICKNESS * 1.2)
         return vec4(1);
-    else if (u_ball_position < 0 && abs(x - y) <= .3 * PARABOLA_THICKNESS / u_parabola_height)
+    else if (u_animating == 0 && abs(x - y) <= .3 * PARABOLA_THICKNESS / u_parabola_height)
         return lerp(coords.x, vec4(.7, 0, 0, .3), vec4(1, 0, 0, .7));
     else
         return vec4(0);
@@ -91,9 +91,9 @@ void main()
         const vec2 para_start = (u_parabola * vec4(0, 0, 0, 1)).xz;
         const vec2 para_end = (u_parabola * vec4(1, 0, 0, 1)).xz;
 
-        if (distance(pos_model.xz, para_start) < PARABOLA_THICKNESS * .25)
+        if (u_animating == 0 && distance(pos_model.xz, para_start) < PARABOLA_THICKNESS * .25)
             gl_FragColor = vec4(.5, 0, 0, 1);
-        else if (distance(pos_model.xz, para_end) < PARABOLA_THICKNESS * .25)
+        else if (u_animating == 0 && distance(pos_model.xz, para_end) < PARABOLA_THICKNESS * .25)
             gl_FragColor = vec4(1, 0, 0, 1);
         else
             gl_FragColor = main_course();

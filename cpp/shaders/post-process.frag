@@ -59,7 +59,8 @@ void main()
         gl_FragColor = color;
     }
 
-    if (pixel_coord.x >= UI_LEFT &&
+    if (u_animating == 0 &&
+        pixel_coord.x >= UI_LEFT &&
         pixel_coord.x < UI_LEFT + UI_WIDTH &&
         pixel_coord.y >= u_height - UI_BOTTOM - UI_HEIGHT &&
         pixel_coord.y < u_height - UI_BOTTOM)
