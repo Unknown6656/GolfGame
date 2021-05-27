@@ -1,4 +1,4 @@
-﻿#define GLEW_STATIC
+#define GLEW_STATIC
 
 #include "main.hpp"
 
@@ -389,6 +389,10 @@ int window_load(GLFWwindow* const window)
     shader_main->set_vec4("u_colors.water", color_water);
     shader_main->set_vec4("u_colors.sun", color_sun);
     shader_main->set_vec2("u_dimensions", rasterization_data.dimensions);
+    shader_main->set_vec2("u_putting_green.position", rasterization_data.end.position);
+    shader_main->set_float("u_putting_green.point_size", rasterization_data.end.point_size);
+    shader_main->set_float("u_putting_green.area_size", rasterization_data.end.area_size);
+
     img_flagpole = new ImageTexture("assets/flagpole.png", shader_main, "tex_flagpole", 2);
     img_player = new ImageTexture("assets/player.png", shader_main, "tex_player", 3);
 

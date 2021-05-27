@@ -46,6 +46,12 @@ uniform struct {
     vec4 sun;
 } u_colors;
 
+uniform struct {
+    vec2 position;
+    float point_size;
+    float area_size;
+} u_putting_green;
+
 
 vec3 hue2rgb(float hue)
 {

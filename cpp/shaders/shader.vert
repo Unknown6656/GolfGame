@@ -19,7 +19,7 @@ void main()
     type = vertex_type;
 
     mat4 transf;
-    
+
     if (type == TYPE_COURSE)
         transf = u_model;
     else if (type == TYPE_PARABOLA)
