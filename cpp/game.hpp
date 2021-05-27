@@ -162,13 +162,13 @@ struct GolfCourse
 
         const float margin = .39f - ((int)par - (int)Par::Par3) * .13f;
 
-        _course_start_position.point_size = .001f;
+        _course_start_position.point_size = .01f;
         _course_start_position.area_size = .1f;
         _course_start_position.position = glm::vec2(
             randf(margin) + _course_start_position.area_size,
             randf(1.f - 2.f * _course_start_position.area_size) + _course_start_position.area_size
         );
-        _course_putting_green.point_size = .001f;
+        _course_putting_green.point_size = .01f;
         _course_putting_green.area_size = randf(.1f) + .07f;
         _course_putting_green.position = glm::vec2(
             randf(margin) + (length - margin - _course_putting_green.area_size),
