@@ -27,7 +27,7 @@ void main()
     else if (type == TYPE_PLAYER)
         transf = u_player;
     else if (type == TYPE_FLAGPOLE)
-        transf = u_flagpole;
+        transf = u_flagpole * mat4(mat3(.5));
     else
         transf = mat4(1);
 
