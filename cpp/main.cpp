@@ -1,7 +1,9 @@
-#define GLEW_STATIC
+﻿#define GLEW_STATIC
 
 #include "main.hpp"
 
+
+#define _sleep(ms) std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
 
 Shader* shader_main = nullptr;
@@ -154,7 +156,7 @@ int __cdecl main(const int argc, const char** const argv)
             constexpr double ifps = 1.0 / FPS_TARGET;
 
             while (glfwGetTime() - curr_time <= ifps)
-                std::this_thread::sleep_for(std::chrono::milliseconds((int)(ifps * 330)));
+                _sleep((int)(ifps * 330));
 
             curr_time = glfwGetTime() + glfwGetTime() - curr_time - ifps; // add overhead
         }
@@ -268,7 +270,7 @@ void animate_ball()
 
                 while (ball_position < 1)
                 {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    _sleep(1);
 
                     ball_position = (glfwGetTime() - t_start) * 1000.f / TOTAL_MS;
                 }
@@ -660,7 +662,7 @@ void window_process_input(GLFWwindow* const window, const float time)
 
     if (pressed(GLFW_KEY_F4))
     {
-        Sleep(120);
+        _sleep(120);
         effects ^= true;
     }
 
@@ -697,12 +699,12 @@ void window_process_input(GLFWwindow* const window, const float time)
 
     if (pressed(GLFW_KEY_C) && player_club > GolfClubType::Wood1)
     {
-        Sleep(120);
+        _sleep(120);
         --*(int*)&player_club;
     }
     if (pressed(GLFW_KEY_V) && player_club < GolfClubType::Putter)
     {
-        Sleep(120);
+        _sleep(120);
         ++*(int*)&player_club;
     }
 
