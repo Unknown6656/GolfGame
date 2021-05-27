@@ -155,10 +155,17 @@
     <Font Include="assets\arcade.ttf">
       <DeploymentContent>true</DeploymentContent>
     </Font>
-    <Font Include="assets\basis33.regular.ttf" />
+    <Font Include="assets\basis33.regular.ttf">
+      <DeploymentContent>true</DeploymentContent>
+    </Font>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="assets\clubs.png" />
+    <Image Include="assets\clubs.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="assets\flagpole.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
   </ItemGroup>
   <!--
   <ItemGroup>
