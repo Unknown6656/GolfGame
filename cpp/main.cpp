@@ -37,6 +37,7 @@ GolfCourse* course = nullptr;
 glm::vec2 player_ball_target;
 glm::vec2 player_position;
 GolfClubType player_club;
+PlayerState player_state;
 float player_orientation;
 float player_strength;
 float ball_position;
@@ -565,6 +566,7 @@ void window_render(GLFWwindow* const window, const float time)
     shader_main->set_mat4("u_model", model);
     shader_main->set_mat4("u_parabola", parabola_transform);
     shader_main->set_mat4("u_player", player);
+    shader_main->set_int("u_player_state", (int)player_state);
     shader_main->set_mat4("u_flagpole", flagpole);
     shader_main->set_mat4("u_view", view);
     shader_main->set_mat4("u_projection", proj);
@@ -722,6 +724,7 @@ void reset_player()
     player_position = course->_course_start_position.position;
     player_orientation = 0;
     player_club = GolfClubType::Driver;
+    player_state = PlayerState::Waiting;
     player_strength = 1;
     ball_position = -1;
     is_animating = false;

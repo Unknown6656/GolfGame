@@ -25,6 +25,7 @@ uniform mat4 u_projection;
 uniform vec3 u_camera_position;
 uniform vec3 u_light_position;
 uniform float u_ball_position;
+uniform int u_player_state;
 
 uniform vec2 u_dimensions;
 

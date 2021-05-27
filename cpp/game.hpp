@@ -415,3 +415,19 @@ enum class GolfClubType
     SandWedge = 11,
     Putter = 12,
 };
+
+enum class PlayerState
+{
+    Waiting = 0,
+    Swing1 = 1,
+    Swing2 = 2,
+    Swing3 = 3,
+    Swing4 = 4,
+    Swing5 = 5,
+    Swing6 = 6,
+    Swing7 = 7,
+    Swing8 = 8,
+    Walking1 = 9,
+    Walking2 = 10,
+    Walking3 = 11,
+};
