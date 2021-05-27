@@ -65,13 +65,13 @@ enum class SurfaceType
     UNDEFINED = 0,
     TeeBox = 1,
     TeePoint = 2,
-    Rough = 3,
-    Fairway = 4,
-    OutsideCourse = 5,
-    PuttingGreen = 6,
-    PuttingHole = 7,
-    Bunker = 8,
-    Water = 9,
+    PuttingGreen = 3,
+    PuttingHole = 4,
+    Fairway = 5,
+    Rough = 6,
+    Bunker = 7,
+    Water = 8,
+    OutsideCourse = 9,
 };
 
 struct RasterizationData
@@ -187,6 +187,8 @@ struct GolfCourse
             );
         };
 
+        const float padding = std::max(_course_start_position.area_size, _course_putting_green.area_size);
+
         if (par == Par::Par4)
         {
             const float mid_pos = randf(.6f) + .2f;
@@ -194,6 +196,7 @@ struct GolfCourse
             glm::vec2 mid = lerp(mid_pos);
 
             mid += glm::vec2(std::cosf(φ) * mid_dev, std::sinf(φ) * mid_dev);
+            mid.y = glm::clamp(mid.y, padding, 1 - padding);
 
             _course_midway_points = { mid };
         }
@@ -206,6 +209,8 @@ struct GolfCourse
 
             mid_1 += glm::vec2(std::cosf(φ) * mid_dev_1, std::sinf(φ) * mid_dev_1);
             mid_2 += glm::vec2(std::cosf(φ) * mid_dev_2, std::sinf(φ) * mid_dev_2);
+            mid_1.y = glm::clamp(mid_1.y, padding, 1 - padding);
+            mid_2.y = glm::clamp(mid_2.y, padding, 1 - padding);
 
             _course_midway_points = { mid_1, mid_2 };
         }
