@@ -31,11 +31,6 @@ vec4 main_player()
     return vec4(coords, 0, 1);
 }
 
-vec4 main_flagpole()
-{
-    return vec4(coords, 1, 1);
-}
-
 vec4 main_course()
 {
     const int type = int(texture2D(tex_surface, coords).x * 255);
@@ -108,7 +103,8 @@ void main()
     else if (type == TYPE_PLAYER)
         gl_FragColor = main_player();
     else if (type == TYPE_FLAGPOLE)
-        gl_FragColor = main_flagpole();
+        gl_FragColor = texture2D(tex_flagpole, coords);
     else
         gl_FragColor = vec4(1, 0, 1, 1);
+
 }
