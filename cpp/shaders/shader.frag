@@ -28,7 +28,7 @@ vec4 main_parabola()
 
 vec4 main_player()
 {
-    return vec4(coords, 0, 1);
+    return texture2D(tex_player, (coords + vec2(u_player_state, 0)) * vec2(tex_player_size.y / tex_player_size.x, 1));
 }
 
 vec4 main_course()
@@ -36,10 +36,10 @@ vec4 main_course()
     const int type = int(texture2D(tex_surface, coords).x * 255);
     vec4 color = vec4(1, 0, 1, 1);
 
-    if (type == SURFACE_TYPE_TEEBOX)
-        color = u_colors.tee_box;
-    else if (type == SURFACE_TYPE_TEEPOINT)
+    if (type == SURFACE_TYPE_TEEPOINT)
         color = vec4(0, 0, 0, 1);
+    else if (type == SURFACE_TYPE_TEEBOX)
+        color = u_colors.tee_box;
     else if (type == SURFACE_TYPE_ROUGH)
         color = u_colors.rough;
     else if (type == SURFACE_TYPE_FAIRWAY)
@@ -47,13 +47,13 @@ vec4 main_course()
         color = u_colors.fairway;
         color += HATCHET_INTENSITY * (int(pos.x * HATCHET_X + pos.z * HATCHET_Y + HATCHET_OFFS) % 2);
     }
+    else if (type == SURFACE_TYPE_PUTTINGHOLE || distance(pos.xz, u_putting_green.position) < u_putting_green.point_size)
+        color = vec4(0, 0, 0, 1);
     else if (type == SURFACE_TYPE_PUTTINGGREEN)
     {
         color = u_colors.putting_green;
         color += HATCHET_INTENSITY * (int(pos.x * HATCHET_X + pos.z * HATCHET_Y + HATCHET_OFFS) % 2 - int(pos.z * HATCHET_X - pos.x * HATCHET_Y + HATCHET_OFFS) % 2);
     }
-    else if (type == SURFACE_TYPE_PUTTINGHOLE)
-        color = vec4(0, 0, 0, 1);
     else if (type == SURFACE_TYPE_BUNKER)
         color = u_colors.water; // TODO: water movement
     else if (type == SURFACE_TYPE_WATER)
@@ -95,6 +95,8 @@ void main()
             gl_FragColor = vec4(.5, 0, 0, 1);
         else if (u_animating == 0 && distance(pos_model.xz, para_end) < PARABOLA_THICKNESS * .25)
             gl_FragColor = vec4(1, 0, 0, 1);
+        else if (u_ball_position >= .99 && distance(pos_model.xz, para_end) < PARABOLA_THICKNESS * .2)
+            gl_FragColor = vec4(1);
         else
             gl_FragColor = main_course();
     }
