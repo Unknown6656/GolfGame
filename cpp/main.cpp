@@ -87,7 +87,7 @@ int __cdecl main(const int argc, const char** const argv)
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
 #endif
-    GLFWwindow* const window = glfwCreateWindow(INIT_WIDTH, INIT_HEIGHT, "Golf Game", nullptr, nullptr);
+    GLFWwindow* const window = glfwCreateWindow(INIT_WIDTH, INIT_HEIGHT, "GOLF GOD", nullptr, nullptr);
     int exit_code = -1;
 
     if (!window)
@@ -134,7 +134,7 @@ int __cdecl main(const int argc, const char** const argv)
         {
             if ((curr_time - disp_time) >= FPS_DISPLAY_INTERVAL)
             {
-                glfwSetWindowTitle(window, format("Golf Game   [%f FPS]", frames / (curr_time - disp_time)).c_str());
+                // glfwSetWindowTitle(window, format("Golf Game   [%f FPS]", frames / (curr_time - disp_time)).c_str());
 
                 frames = 0;
                 disp_time = curr_time;
