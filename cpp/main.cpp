@@ -9,6 +9,7 @@ Shader* shader_main = nullptr;
 Shader* shader_post = nullptr;
 Shader* shader_font = nullptr;
 ImageTexture* img_clubs = nullptr;
+ImageTexture* img_trees = nullptr;
 ImageTexture* img_player = nullptr;
 ImageTexture* img_flagpole = nullptr;
 unsigned int FBO, RBO, TEX; // framebuffer, renderbuffer, and texturebuffer
@@ -391,7 +392,7 @@ int window_load(GLFWwindow* const window)
 
     const Par par = (Par)(rand() % 3);
     course = new GolfCourse(par, 2.f + (int)par * 1.f, seed);
-    course->rasterize(20, 128, 3, &rasterization_data);
+    course->rasterize(20, 128, 9, &rasterization_data);
     player_position = course->_course_start_position.position;
 
     const int vertex_index_offs = rasterization_data.vertices.size();
@@ -422,7 +423,6 @@ int window_load(GLFWwindow* const window)
 
     rasterization_data.vertices.insert(rasterization_data.vertices.end(), vertices.begin(), vertices.end());
     rasterization_data.indices.insert(rasterization_data.indices.end(), indices.begin(), indices.end());
-
 
     /////////////////////////////////// SET UP MAIN SHADER ///////////////////////////////////
 
@@ -479,6 +479,7 @@ int window_load(GLFWwindow* const window)
 
     img_flagpole = new ImageTexture("assets/flagpole.png", shader_main, "tex_flagpole", 2);
     img_player = new ImageTexture("assets/player.png", shader_main, "tex_player", 3);
+    img_trees = new ImageTexture("assets/trees.png", shader_main, "tex_trees", 4);
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -582,6 +583,7 @@ void window_unload(GLFWwindow* const)
 
     delete course;
     delete img_clubs;
+    delete img_trees;
     delete img_player;
     delete img_flagpole;
     delete shader_main;
@@ -590,6 +592,7 @@ void window_unload(GLFWwindow* const)
 
     course = nullptr;
     img_clubs = nullptr;
+    img_trees = nullptr;
     img_player = nullptr;
     img_flagpole = nullptr;
     shader_main = nullptr;
@@ -671,6 +674,7 @@ void window_render(GLFWwindow* const window, const float time)
     shader_main->set_float("u_ball_position", ball_position);
     img_flagpole->bind();
     img_player->bind();
+    img_trees->bind();
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, TEX_surface);
