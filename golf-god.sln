@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31112.23
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "golf-god", "cpp/golf-god.vcxproj", "{B3C3B49A-8289-48F2-8B95-1614E5BC7552}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "golf-god", "src/golf-god.vcxproj", "{B3C3B49A-8289-48F2-8B95-1614E5BC7552}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

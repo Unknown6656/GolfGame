@@ -49,7 +49,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin</OutDir>
-    <IntDir>$(ProjectName)/obj</IntDir>
+    <IntDir>obj</IntDir>
     <ReferencePath>$(SolutionDir)dependencies/lib;$(ReferencePath)</ReferencePath>
     <CopyLocalProjectReference>true</CopyLocalProjectReference>
     <CopyCppRuntimeToOutputDir>true</CopyCppRuntimeToOutputDir>
@@ -59,7 +59,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)bin</OutDir>
-    <IntDir>$(ProjectName)/obj</IntDir>
+    <IntDir>obj</IntDir>
     <ReferencePath>$(SolutionDir)dependencies/lib;$(ReferencePath)</ReferencePath>
     <CopyLocalProjectReference>true</CopyLocalProjectReference>
     <CopyCppRuntimeToOutputDir>true</CopyCppRuntimeToOutputDir>
