@@ -30,11 +30,14 @@
 #include <map>
 #include <ppl.h>
 
+#define GLFW_EXPOSE_NATIVE_WIN32
+
 // #include <GL/glew.h>
 // #include <GL/wglew.h>
 // #include <GL/glu.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 //#include <KHR/khrplatform.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
