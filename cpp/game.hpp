@@ -409,9 +409,6 @@ struct GolfCourse
                 type = SurfaceType::TeeBox;
             else
             {
-                // TODO : water
-                // TODO : bunker
-
                 float distance_to_fairway = 0.f;
 
                 if (_par == Par::Par3)
@@ -432,13 +429,23 @@ struct GolfCourse
 
                 const float fairway_size_factor = (position.x - data->tee.position.x) / (data->end.position.x - data->tee.position.x);
                 const float fairway_size = glm::mix(data->tee.area_size, data->end.area_size, fairway_size_factor) + .15f;
+                const bool bunker = _noise.noise2d((position + data->end.position) * 5.f) < .15f;
+                const bool water = _noise.noise2d((position + data->start) * 2.f) < .1f;
 
                 if (distance_to_fairway < fairway_size)
-                    type = SurfaceType::Fairway;
-                else if (outside)
-                    type = SurfaceType::OutsideCourse;
+                    if (bunker)
+                        type = SurfaceType::Bunker;
+                    else if (water)
+                        type = SurfaceType::Water;
+                    else
+                        type = SurfaceType::Fairway;
+                else if (!outside)
+                    if (water && std::min(glm::distance(position, data->tee.position), glm::distance(position, data->end.position)) > 2 * fairway_size)
+                        type = SurfaceType::Water;
+                    else
+                        type = SurfaceType::Rough;
                 else
-                    type = SurfaceType::Rough;
+                    type = SurfaceType::OutsideCourse;
             }
         });
 
