@@ -173,6 +173,9 @@
     <Image Include="assets\player.png">
       <DeploymentContent>true</DeploymentContent>
     </Image>
+    <Image Include="assets\trees.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
   </ItemGroup>
   <!--
   <ItemGroup>
