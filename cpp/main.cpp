@@ -754,12 +754,12 @@ void window_process_input(GLFWwindow* const window, const float time)
             camera_position.y += CAMERA_SPEED * .5;
             camera_position.z += CAMERA_SPEED;
         }
-        if (pressed(GLFW_KEY_Q))
+        if (pressed(GLFW_KEY_E))
         {
             fov += CAMERA_SPEED * 12;
             camera_focus -= CAMERA_SPEED * .2;
         }
-        else if (pressed(GLFW_KEY_E))
+        else if (pressed(GLFW_KEY_Q))
         {
             fov -= CAMERA_SPEED * 12;
             camera_focus += CAMERA_SPEED * .2;
