@@ -120,10 +120,12 @@
     <ClInclude Include="game.hpp" />
     <ClInclude Include="main.hpp" />
     <ClInclude Include="patterns.hpp" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="shader.hpp" />
     <ClInclude Include="stb_image.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="golf-god.aps" />
     <None Include="shaders\common.glsl">
       <DeploymentContent>true</DeploymentContent>
     </None>
@@ -170,12 +172,19 @@
     <Image Include="assets\flagpole.png">
       <DeploymentContent>true</DeploymentContent>
     </Image>
+    <Image Include="assets\icon.ico">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="assets\icon.png" />
     <Image Include="assets\player.png">
       <DeploymentContent>true</DeploymentContent>
     </Image>
     <Image Include="assets\trees.png">
       <DeploymentContent>true</DeploymentContent>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="golf-god.rc" />
   </ItemGroup>
   <!--
   <ItemGroup>
