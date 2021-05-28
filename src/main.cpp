@@ -117,6 +117,12 @@ int __cdecl main(const int argc, const char** const argv)
         // glShadeModel(GL_SMOOTH);
         // glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
+        const HICON hIcon = static_cast<HICON>(::LoadImage(GetModuleHandle(nullptr), MAKEINTRESOURCE("assets/icon.ico"), IMAGE_ICON, 64, 64, LR_DEFAULTCOLOR));
+        const HWND hWnd = glfwGetWin32Window(window);
+
+        SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+
         font_main = new Font(font_path);
         exit_code = window_load(window);
     }
