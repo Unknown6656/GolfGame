@@ -71,9 +71,9 @@ vec4 main_course()
         color += HATCHET_INTENSITY * (int(pos.x * HATCHET_X + pos.z * HATCHET_Y + HATCHET_OFFS) % 2 - int(pos.z * HATCHET_X - pos.x * HATCHET_Y + HATCHET_OFFS) % 2);
     }
     else if (type == SURFACE_TYPE_BUNKER)
-        color = u_colors.water; // TODO: water movement
+        color = u_colors.bunker * (.8 + .2 * noise3D(pos * 100));
     else if (type == SURFACE_TYPE_WATER)
-        color = u_colors.bunker; // TODO: noise
+        color = u_colors.water * (.7 + .2 * noise3D(pos * 10 + u_time)); // TODO: water movement
     else
     {
         const float displaced_offs = noise2D(pos_model.xz * 6) * .2;
