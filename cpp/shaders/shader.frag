@@ -38,9 +38,13 @@ vec4 main_player()
 
 vec4 main_tree()
 {
+    const vec2 tex_coords = vec2(fract(coords.x * 10), coords.y);
+
+    return texture2D(tex_trees, tex_coords);
+
+
 // TODO : render trees
 
-    return vec4(hue2rgb(atan(pos_model.z, pos_model.x)), 1);
 }
 
 vec4 main_course()

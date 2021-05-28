@@ -16,6 +16,9 @@
 
 #define PARABOLA_THICKNESS .02
 
+#define TREE_WIDTH 85
+#define TREE_HEIGHT 130
+
 
 uniform mat4 u_model;
 uniform mat4 u_parabola;
@@ -36,6 +39,8 @@ uniform sampler2D tex_flagpole;
 uniform vec2 tex_flagpole_size;
 uniform sampler2D tex_player;
 uniform vec2 tex_player_size;
+uniform sampler2D tex_trees;
+uniform vec2 tex_trees_size;
 
 uniform struct {
     vec4 outside_bounds;
