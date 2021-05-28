@@ -245,6 +245,11 @@ struct GolfCourse
         data->mid[0] = _course_midway_points.size() ? _course_midway_points[0] : glm::vec2();
         data->mid[1] = _course_midway_points.size() > 1 ? _course_midway_points[1] : glm::vec2();
 
+        std::vector<float> tree_row_offsets;
+
+        for (int i = 0; i < tree_rows; ++i)
+            tree_row_offsets.push_back(randf());
+
         for (int i = 0; i < inner_count; ++i)
         {
             const int ix = i % (size_x + 1);
@@ -314,8 +319,8 @@ struct GolfCourse
             outer_pos.x *= ratio * .5f;
             outer_pos += center;
 
-            data->vertices[outer_index_1].position = glm::vec3(outer_pos.x, 0, outer_pos.y);
             data->vertices[outer_index_1].type = VertexType::Course;
+            data->vertices[outer_index_1].position = glm::vec3(outer_pos.x, 0, outer_pos.y);
 
             const int base_index = 6 * size_x * size_y + 6 * i;
 
@@ -336,16 +341,20 @@ struct GolfCourse
                 const int next_tree_bottom = inner_count + edge_count * (1 + tree_row * 2) + (i + 1) % edge_count;
                 const int next_tree_top = inner_count + edge_count * (2 + tree_row * 2) + (i + 1) % edge_count;
                 const int tree_base_index = 6 * (size_x * size_y + edge_count * (1 + tree_row) + i);
-                glm::vec2 tree_position = glm::normalize(edge_mid - center) * 2.5f;
+                glm::vec2 tree_position = glm::normalize(edge_mid - center) * RADIUS * .7f;
 
                 tree_position.x *= ratio * .5f;
-                tree_position *= (1 - .3f * tree_row / (float)tree_rows);
+                tree_position *= (1.f - .25f * tree_row / (float)tree_rows);
                 tree_position += center;
 
-                data->vertices[tree_index_bottom].position = glm::vec3(tree_position.x, 0, tree_position.y);
+                float texture_phase = glm::fract((atan2f(tree_position.y, tree_position.x) / M_PI + 1) * .5 + tree_row_offsets[tree_row]);
+
                 data->vertices[tree_index_bottom].type = VertexType::Tree;
-                data->vertices[tree_index_top].position = glm::vec3(tree_position.x, .7f - .4f * tree_row / (float)tree_rows, tree_position.y);
+                data->vertices[tree_index_bottom].coords = glm::vec2(texture_phase, 1);
+                data->vertices[tree_index_bottom].position = glm::vec3(tree_position.x, 0, tree_position.y);
                 data->vertices[tree_index_top].type = VertexType::Tree;
+                data->vertices[tree_index_top].coords = glm::vec2(texture_phase, 0);
+                data->vertices[tree_index_top].position = glm::vec3(tree_position.x, .5f - .3f * tree_row / (float)tree_rows, tree_position.y);
 
                 if (tree_position.y > .3f)
                     data->vertices[tree_index_top].position.y *= std::max(.2f, 1.12f - .4f * tree_position.y);
@@ -362,7 +371,8 @@ struct GolfCourse
         }
 
         for (VertexData& vertex : data->vertices)
-            vertex.coords = vertex.position.xz / glm::vec2(ratio, 1.f);
+            if (vertex.type == VertexType::Course)
+                vertex.coords = vertex.position.xz / glm::vec2(ratio, 1.f);
 
 
 
