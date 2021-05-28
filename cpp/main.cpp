@@ -21,6 +21,7 @@ int seed = randf() * 420 + 315;
 bool effects = true;
 float fov = 90.0f;
 float rotation_angle = 10.f;
+float camera_focus = .5f;
 glm::vec3 light_position = glm::vec3(0.f, 3.f, -2.f);
 glm::vec3 camera_position = glm::vec3(0.f, 1.5f, 2.5f);
 glm::mat4 parabola_transform = glm::mat4(1.f);
@@ -54,15 +55,14 @@ Font* font_main = nullptr;
 //constexpr const char font_path[] = "assets/arcade.ttf";
 constexpr const char font_path[] = "assets/basis33.regular.ttf";
 constexpr const char help_text[] = R"(Keyboard bindings:
-[W] [A] [S] [D]   Move the camera
-[E] [R]           Zoom in or out
-[LEFT] [RIGHT]    Turn the player
-[C] [V]           Switch golf clubs
-[F] [G]           Change strike strength
-[ENTER]           Play / strike ball
-[T]               Reset player
-[ESCAPE]          Quit game
-[F4]              Enable/Disable visual effects
+[W][A][S][D]   Move the camera
+[Q][E]         Move camera focus
+[LEFT][RIGHT]  Turn the player
+[C][V]         Switch golf clubs
+[F][G]         Change strike strength
+[ENTER]        Play / strike ball
+[T]            Reset player
+[ESCAPE]       Quit game
 )";
 
 
@@ -636,7 +636,7 @@ void window_render(GLFWwindow* const window, const float time)
     glClearColor(.2f, .3f, .3f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    const glm::vec3 look_at = glm::vec3((player_transform * glm::vec4(0.f, 0.f, 0.f, 1.f)).xyz * .75f);
+    const glm::vec3 look_at = glm::vec3(glm::mix(rasterization_data.end.position, player_position, camera_focus) - .5f * rasterization_data.dimensions, 0.f).xzy;
     const glm::mat4 model = glm::translate(
         glm::mat4(1.f),
         glm::vec3(-.5f * rasterization_data.dimensions.x, 0.f, -.5f * rasterization_data.dimensions.y)
@@ -718,7 +718,7 @@ void window_render(GLFWwindow* const window, const float time)
     }
     else if (!is_animating)
     {
-        render_text_2D(window, help_text, 10, height - 70, 1.3, from_argb(0xffbbbbbb));
+        render_text_2D(window, help_text, 10, height - 70, 1.5, from_argb(0xffffffff));
         render_text_2D(window, format("Par: %d\nSurface: %s\nStrokes: %d",
             (int)rasterization_data.par + 3,
             surface_type <= SurfaceType::TeePoint ? "Tee" :
@@ -727,7 +727,7 @@ void window_render(GLFWwindow* const window, const float time)
             surface_type <= SurfaceType::Rough ? "Rough" :
             surface_type <= SurfaceType::Bunker ? "Bunker" :
             surface_type <= SurfaceType::Water ? "Water" : "Outside",
-            stroke_count), 140, 90, 2, from_argb(0xffff8888));
+            stroke_count), 150, 80, 2, from_argb(0xffffbbbb));
     }
 }
 
@@ -754,10 +754,16 @@ void window_process_input(GLFWwindow* const window, const float time)
             camera_position.y += CAMERA_SPEED * .5;
             camera_position.z += CAMERA_SPEED;
         }
-        if (pressed(GLFW_KEY_R))
+        if (pressed(GLFW_KEY_Q))
+        {
             fov += CAMERA_SPEED * 12;
+            camera_focus -= CAMERA_SPEED * .2;
+        }
         else if (pressed(GLFW_KEY_E))
+        {
             fov -= CAMERA_SPEED * 12;
+            camera_focus += CAMERA_SPEED * .2;
+        }
     }
 
     if (is_animating)
@@ -845,7 +851,8 @@ void window_process_input(GLFWwindow* const window, const float time)
         ++stroke_count;
     }
 
-    fov = glm::clamp(fov, 60.f, 100.f);
+    fov = glm::clamp(fov, 70.f, 100.f);
+    camera_focus = glm::clamp(camera_focus, .1f, .9f);
     player_orientation = modpos(player_orientation, 2 * M_PI);
     player_strength = glm::clamp(player_strength, .3f, 1.f);
     camera_position = glm::clamp(camera_position, glm::vec3(-3.f, .4f, .3f), glm::vec3(3.f, 1.9f, 3.3f));
