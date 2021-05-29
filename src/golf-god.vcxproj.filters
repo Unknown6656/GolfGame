@@ -69,6 +69,7 @@
     <None Include="shaders\shader.glsl" />
     <None Include="shaders\font.glsl" />
     <None Include="golf-god.aps" />
+    <None Include="autorun.inf" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="assets\arcade.ttf" />
@@ -91,6 +92,9 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="assets\icon.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="favicon.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

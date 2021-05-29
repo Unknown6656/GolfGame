@@ -125,6 +125,9 @@
     <ClInclude Include="stb_image.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="autorun.inf">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
     <None Include="golf-god.aps" />
     <None Include="shaders\common.glsl">
       <DeploymentContent>true</DeploymentContent>
@@ -180,6 +183,9 @@
       <DeploymentContent>true</DeploymentContent>
     </Image>
     <Image Include="assets\trees.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="favicon.ico">
       <DeploymentContent>true</DeploymentContent>
     </Image>
   </ItemGroup>
