@@ -1,0 +1,5 @@
+[autorun]
+action=Play the Game "GOLF GOD"
+open=GOLF_GOD.exe
+icon=favicon.ico
+label=GOLF GOD
